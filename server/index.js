@@ -51,7 +51,7 @@ Analyze these image(s) carefully using every visual clue available:
 - Use standard room features for scale: doorways are typically 80" tall and 32-36" wide, ceiling heights are typically 96-108", electrical outlets are 4.5" tall, light switches are 4.5" tall
 - Use the furniture's own proportions — drawer heights, cushion depths, leg heights all have standard sizes
 - Look at flooring tiles/planks, baseboards, and wall features for additional scale
-- Cross-check your estimates: does the weight make sense for the material and size?${materialDensity ? ` Use ${materialDensity} lbs/cu ft for this item.` : ' (solid wood = ~45 lbs/cu ft, upholstered = ~22 lbs/cu ft, particleboard = ~35 lbs/cu ft, metal = ~90 lbs/cu ft)'}
+- Cross-check your estimates: does the weight make sense for the material and size?${materialDensity ? ` Use ${materialDensity} lbs/cu ft for this item.` : ' (solid wood = ~45 lbs/cu ft, upholstered = ~22 lbs/cu ft, particleboard = ~35 lbs/cu ft, metal = ~90 lbs/cu ft, marble/stone = ~160 lbs/cu ft)'}
 
 Respond with ONLY valid JSON, no markdown, no code fences:
 {
