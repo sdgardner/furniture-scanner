@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Furniture Scanner — uShip</title>
+  <link rel="stylesheet" href="project/colors_and_type.css">
+  <link rel="stylesheet" href="project/components.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--gray-200);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 32px 16px;
+    }
+
+    /* ── Phone shell ────────────────────────────── */
+    .phone {
+      width: 390px; height: 844px;
+      border-radius: 52px;
+      overflow: hidden;
+      position: relative;
+      display: flex; flex-direction: column;
+      box-shadow:
+        0 0 0 10px #111,
+        0 0 0 11px #2a2a2a,
+        0 28px 72px rgba(0,0,0,.5),
+        0 4px 16px rgba(0,0,0,.3);
+    }
+    .status-bar {
+      height: 54px; flex-shrink: 0;
+      display: flex; align-items: flex-end;
+      padding: 0 28px 10px;
+      position: relative; z-index: 20;
+    }
+    .dynamic-island {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+      width: 120px; height: 34px; background: #111; border-radius: 20px; z-index: 30;
+    }
+    .home-bar {
+      height: 34px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .screens { flex: 1; position: relative; overflow: hidden; }
+    .screen {
+      position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
+      display: flex; flex-direction: column;
+      transform: translateX(100%); opacity: 0;
+      transition: transform 300ms cubic-bezier(.2,0,0,1), opacity 220ms;
+      pointer-events: none;
+    }
+    .screen.active  { transform: translateX(0);    opacity: 1; pointer-events: auto; }
+    .screen.behind  { transform: translateX(-20%); opacity: 0; pointer-events: none; }
+
+    /* ── App chrome ─────────────────────────────── */
+    .app-bar {
+      height: 56px; flex-shrink: 0;
+      display: flex; align-items: center; padding: 0 16px; gap: 8px;
+      background: var(--blue-600);
+    }
+    .back-bar {
+      height: 48px; flex-shrink: 0;
+      display: flex; align-items: center; padding: 0 8px; gap: 4px;
+      background: var(--gray-0); border-bottom: 1px solid var(--gray-200);
+    }
+    .step-bar {
+      flex-shrink: 0; padding: 10px 20px 8px;
+      background: var(--gray-0); border-bottom: 1px solid var(--gray-200);
+    }
+
+    /* ── Camera view ────────────────────────────── */
+    .cam { flex: 1; position: relative; background: #0a0a0a; overflow: hidden; }
+    .cam-noise {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        #161616 0, #161616 1px,
+        #0a0a0a 0, #0a0a0a 8px
+      );
+    }
+    @keyframes scan {
+      0%   { top: 8%; }
+      100% { top: 88%; }
+    }
+    .scan-line {
+      position: absolute; left: 8%; right: 8%; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(90,191,224,.8), transparent);
+      border-radius: 1px;
+      animation: scan 2s ease-in-out infinite alternate;
+    }
+    .corner { position: absolute; width: 22px; height: 22px; }
+    .corner--tl { top: 10%; left: 7%;  border-top:    3px solid rgba(90,191,224,.9); border-left:  3px solid rgba(90,191,224,.9); }
+    .corner--tr { top: 10%; right: 7%; border-top:    3px solid rgba(90,191,224,.9); border-right: 3px solid rgba(90,191,224,.9); }
+    .corner--bl { bottom: 22%; left: 7%;  border-bottom: 3px solid rgba(90,191,224,.9); border-left:  3px solid rgba(90,191,224,.9); }
+    .corner--br { bottom: 22%; right: 7%; border-bottom: 3px solid rgba(90,191,224,.9); border-right: 3px solid rgba(90,191,224,.9); }
+    .cam-footer {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 14px 24px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(to top, rgba(0,0,0,.65), transparent);
+    }
+    .cam-ctrl {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(255,255,255,.12); border: 1.5px solid rgba(255,255,255,.25);
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.75); cursor: pointer; font-size: 18px;
+    }
+    .shutter {
+      width: 70px; height: 70px; border-radius: 50%; cursor: pointer;
+      background: white; box-shadow: 0 0 0 4px rgba(255,255,255,.3);
+      display: flex; align-items: center; justify-content: center;
+      border: none; transition: transform 80ms;
+    }
+    .shutter:active { transform: scale(.94); }
+
+    /* ── Processing ─────────────────────────────── */
+    @keyframes shimmer {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(200%); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .shimmer-wrap { position: relative; overflow: hidden; }
+    .shimmer-wrap::after {
+      content: ''; position: absolute; inset: 0;
+      width: 40%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+      animation: shimmer 1.5s infinite;
+    }
+    .proc-step { animation: fadeUp 280ms ease both; }
+
+    /* ── Results ────────────────────────────────── */
+    .results-photo {
+      flex-shrink: 0; background: #111; padding: 18px 36px 14px;
+      position: relative;
+    }
+    .results-card {
+      flex: 1; background: var(--gray-50);
+      border-radius: 20px 20px 0 0; margin-top: -16px;
+      padding: 20px 16px 20px; overflow-y: auto;
+    }
+    .dim-chip {
+      border-radius: 5px; padding: 3px 10px;
+      font: 700 13px/1 var(--font-sans); color: white;
+    }
+    .stat-cell {
+      background: var(--gray-0); border: 1px solid var(--gray-300);
+      border-radius: 8px; padding: 10px 8px; text-align: center;
+    }
+  </style>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js"
+    integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L"
+    crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
+    integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm"
+    crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+    integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y"
+    crossorigin="anonymous"></script>
+  <script type="text/babel" src="project/tweaks-panel.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "units": "in",
+  "showConfidence": true
+}/*EDITMODE-END*/;
+
+/* ── SVG ICONS ──────────────────────────────────────────────────────────── */
+const Ico = ({ d, size = 24, stroke = 1.5, fill = "none" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}
+    stroke="currentColor" strokeWidth={stroke}
+    strokeLinecap="round" strokeLinejoin="round">
+    {d.map((p, i) =>
+      typeof p === 'string' && p.startsWith('<circle')
+        ? <circle key={i} {...Object.fromEntries(
+            p.match(/(\w+)="([^"]+)"/g).map(a => a.split('=').map(s => s.replace(/"/g,'')))
+          )} />
+        : <path key={i} d={p} />
+    )}
+  </svg>
+);
+
+const IcoCamera  = () => <Ico d={['M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z','<circle cx="12" cy="13" r="4"/>']} />;
+const IcoUpload  = () => <Ico d={['M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4','M17 8l-5-5-5 5','M12 3v12']} />;
+const IcoBack    = () => <Ico d={['M15 18l-6-6 6-6']} stroke={2} />;
+const IcoCheck   = () => <Ico d={['M20 6L9 17l-5-5']} size={14} stroke={2.5} />;
+const IcoTruck   = () => <Ico d={['M1 3h15v13H1z','M16 8l4 0 3 3v5h-7V8z','<circle cx="5.5" cy="18.5" r="2.5"/>','<circle cx="18.5" cy="18.5" r="2.5"/>']} size={20} />;
+const IcoSave    = () => <Ico d={['M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z','M17 21v-8H7v8','M7 3v5h8']} size={20} />;
+const IcoShare   = () => <Ico d={['<circle cx="18" cy="5" r="3"/>','<circle cx="6" cy="12" r="3"/>','<circle cx="18" cy="19" r="3"/>','M8.59 13.51l6.83 3.98','M15.41 6.51L8.59 10.49']} size={20} />;
+const IcoChevron = () => <Ico d={['M9 18l6-6-6-6']} size={18} stroke={2} />;
+const IcoWarn    = () => <Ico d={['M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z','M12 9v4','M12 17h.01']} size={20} />;
+
+/* ── BATTERY ICON ───────────────────────────────────────────────────────── */
+function Battery({ dark }) {
+  const c = dark ? 'rgba(255,255,255,.7)' : 'var(--gray-600)';
+  const fill = dark ? 'rgba(255,255,255,.7)' : 'var(--action-primary)';
+  return (
+    <svg width="15" height="10" viewBox="0 0 16 10">
+      <rect x="0" y="1" width="13" height="8" rx="1.5" stroke={c} strokeWidth="1.2" fill="none"/>
+      <rect x="1" y="2" width="9" height="6" rx=".5" fill={fill}/>
+      <rect x="14" y="3.5" width="2" height="3" rx="1"
+        fill={dark ? 'rgba(255,255,255,.4)' : 'var(--gray-400)'}/>
+    </svg>
+  );
+}
+
+/* ── STEP BAR ───────────────────────────────────────────────────────────── */
+function StepBar({ current }) {
+  const labels = ['Position', 'Capture', 'Review'];
+  return (
+    <div className="step-bar">
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        {labels.map((lbl, i) => (
+          <React.Fragment key={i}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: i < current
+                  ? 'var(--action-primary)'
+                  : i === current ? 'var(--action-secondary)' : 'transparent',
+                border: `2px solid ${
+                  i < current ? 'var(--action-primary)'
+                  : i === current ? 'var(--action-secondary)' : 'var(--gray-300)'
+                }`,
+                color: i <= current ? '#fff' : 'var(--gray-400)',
+                fontSize: 12, fontWeight: 700,
+              }}>
+                {i < current ? <IcoCheck /> : i + 1}
+              </div>
+              <span style={{
+                fontSize: 10,
+                fontWeight: i === current ? 700 : 400,
+                color: i === current ? 'var(--action-secondary)' : 'var(--gray-500)',
+              }}>{lbl}</span>
+            </div>
+            {i < 2 && (
+              <div style={{
+                flex: 1, height: 2, margin: '0 4px', marginBottom: 14,
+                background: i < current ? 'var(--action-primary)' : 'var(--gray-200)',
+              }} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── SOFA ILLUSTRATION ──────────────────────────────────────────────────── */
+function Sofa() {
+  return (
+    <svg viewBox="0 0 320 168" width="100%" xmlns="http://www.w3.org/2000/svg"
+      style={{ display: 'block' }}>
+      <ellipse cx="160" cy="163" rx="130" ry="5" fill="rgba(0,0,0,.18)" />
+      {/* Arms */}
+      <rect x="18"  y="86" width="40" height="66" rx="9"
+        fill="rgb(193,187,177)" stroke="rgb(172,166,155)" strokeWidth="1"/>
+      <rect x="262" y="86" width="40" height="66" rx="9"
+        fill="rgb(193,187,177)" stroke="rgb(172,166,155)" strokeWidth="1"/>
+      {/* Back */}
+      <rect x="46" y="62" width="228" height="82" rx="10"
+        fill="rgb(209,204,194)" stroke="rgb(186,180,170)" strokeWidth="1"/>
+      {/* Back cushions */}
+      <rect x="54"  y="70" width="100" height="66" rx="8"
+        fill="rgb(224,218,207)" stroke="rgb(193,187,177)" strokeWidth="1"/>
+      <rect x="166" y="70" width="100" height="66" rx="8"
+        fill="rgb(224,218,207)" stroke="rgb(193,187,177)" strokeWidth="1"/>
+      {/* Seat base */}
+      <rect x="46" y="136" width="228" height="22" rx="6"
+        fill="rgb(193,187,177)" stroke="rgb(172,166,155)" strokeWidth="1"/>
+      {/* Seat cushions */}
+      <rect x="54"  y="138" width="103" height="18" rx="4"
+        fill="rgb(209,204,194)" stroke="rgb(186,180,170)" strokeWidth="1"/>
+      <rect x="163" y="138" width="103" height="18" rx="4"
+        fill="rgb(209,204,194)" stroke="rgb(186,180,170)" strokeWidth="1"/>
+      {/* Legs */}
+      {[56, 130, 190, 264].map(x => (
+        <rect key={x} x={x} y="156" width="10" height="13" rx="2"
+          fill="rgb(94,78,60)"/>
+      ))}
+    </svg>
+  );
+}
+
+/* ── SCREEN 0 · HOME ────────────────────────────────────────────────────── */
+function ScreenHome({ go }) {
+  const recent = [
+    { name: 'Sectional Sofa',  dims: '84" × 34" × 36"', wt: '~185 lbs', date: 'Today'     },
+    { name: 'Dining Table',    dims: '60" × 30" × 30"', wt: '~120 lbs', date: 'Yesterday'  },
+  ];
+
+  return (
+    <div style={{ flex: 1, background: 'var(--gray-50)', display: 'flex', flexDirection: 'column' }}>
+      {/* uShip nav */}
+      <div className="app-bar">
+        <img src="project/assets/uship-logo-white.svg" style={{ height: 22 }} alt="uShip" />
+        <div style={{ flex: 1 }} />
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%',
+          background: 'var(--blue-700)', color: '#fff',
+          fontSize: 13, fontWeight: 700,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>JD</div>
+      </div>
+
+      {/* Hero */}
+      <div style={{ background: 'var(--gray-0)', borderBottom: '1px solid var(--gray-200)', padding: '28px 20px 24px' }}>
+        <div style={{
+          fontSize: 11, fontWeight: 700, color: 'var(--gray-500)',
+          textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6,
+        }}>Item Scanner</div>
+        <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--gray-800)', lineHeight: 1.25, marginBottom: 8 }}>
+          Scan Your Furniture
+        </h1>
+        <p style={{ fontSize: 15, color: 'var(--gray-600)', lineHeight: 1.55, marginBottom: 22 }}>
+          Get instant weight and dimension estimates — before you ship.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button
+            className="skid-btn skid-btn--primary skid-btn--lg"
+            style={{ width: '100%', gap: 10 }}
+            onClick={() => go(1)}>
+            <IcoCamera />Start Scanning
+          </button>
+          <button
+            className="skid-btn skid-btn--tertiary skid-btn--lg"
+            style={{ width: '100%', gap: 10 }}
+            onClick={() => go(1)}>
+            <IcoUpload />Upload a Photo
+          </button>
+        </div>
+      </div>
+
+      {/* Recent scans */}
+      <div style={{ padding: '16px 16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-600)', textTransform: 'uppercase', letterSpacing: '.5px' }}>
+          Recent Scans
+        </span>
+        <button style={{ background: 'none', border: 'none', color: 'var(--blue-600)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+          See All
+        </button>
+      </div>
+
+      {recent.map((item, i) => (
+        <div key={i} className="skid-card"
+          onClick={() => go(3)}
+          style={{ margin: '0 16px 8px', padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'center', cursor: 'pointer' }}>
+          <div style={{
+            width: 44, height: 44, background: 'var(--gray-100)', borderRadius: 6,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--gray-400)', flexShrink: 0,
+          }}>
+            <IcoSave />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--gray-800)', marginBottom: 2 }}>{item.name}</div>
+            <div style={{ fontSize: 13, color: 'var(--gray-600)' }}>{item.dims} · {item.wt}</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            <span style={{ fontSize: 11, color: 'var(--gray-500)' }}>{item.date}</span>
+            <button
+              className="skid-btn skid-btn--secondary skid-btn--sm"
+              style={{ height: 28, fontSize: 12 }}
+              onClick={e => { e.stopPropagation(); go(4); }}>
+              Post
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── SCREEN 1 · CAPTURE ─────────────────────────────────────────────────── */
+function ScreenCapture({ go }) {
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--gray-0)' }}>
+      <div className="back-bar">
+        <button
+          className="skid-btn skid-btn--ghost skid-btn--sm"
+          style={{ width: 36, height: 36, padding: 0 }}
+          onClick={() => go(0)}>
+          <IcoBack />
+        </button>
+        <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--gray-800)' }}>Scan Item</span>
+      </div>
+      <StepBar current={1} />
+
+      <div className="cam">
+        <div className="cam-noise" />
+        <div className="scan-line" />
+
+        {/* Corner markers */}
+        <div className="corner corner--tl" />
+        <div className="corner corner--tr" />
+        <div className="corner corner--bl" />
+        <div className="corner corner--br" />
+
+        {/* Instruction tooltip */}
+        <div style={{
+          position: 'absolute', top: '48%', left: '50%',
+          transform: 'translate(-50%,-50%)',
+          background: 'rgba(0,0,0,.7)', borderRadius: 12, padding: '12px 20px',
+          textAlign: 'center', border: '1px solid rgba(255,255,255,.1)', whiteSpace: 'nowrap',
+        }}>
+          <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 3 }}>
+            Center item in frame
+          </div>
+          <div style={{ color: 'rgba(255,255,255,.55)', fontSize: 13 }}>
+            Keep 6" clearance on all sides
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="cam-footer">
+          <div
+            className="cam-ctrl"
+            onClick={() => go(0)}
+            style={{ fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-sans)' }}>
+            Cancel
+          </div>
+          <button className="shutter" onClick={() => go(2)}>
+            <div style={{ width: 54, height: 54, borderRadius: '50%', background: '#fff', border: '2.5px solid rgba(0,0,0,.08)' }} />
+          </button>
+          <div className="cam-ctrl">⚡</div>
+        </div>
+      </div>
+
+      <div style={{
+        padding: '10px 16px', background: 'var(--orange-50)',
+        borderTop: '1px solid var(--orange-100)',
+        fontSize: 13, color: 'var(--orange-800)', fontFamily: 'var(--font-sans)',
+      }}>
+        Place a coin next to the item for better scale accuracy
+      </div>
+    </div>
+  );
+}
+
+/* ── SCREEN 2 · PROCESSING ──────────────────────────────────────────────── */
+function ScreenProcessing({ go, active }) {
+  const [step, setStep] = useState(0);
+  const steps = ['Photo received', 'Detecting item type', 'Measuring dimensions', 'Estimating weight'];
+  const pct = Math.round(((step + 1) / steps.length) * 100);
+
+  useEffect(() => {
+    if (!active) return;
+    setStep(0);
+    let i = 0;
+    const timers = [];
+    const run = () => {
+      i++;
+      if (i < steps.length) {
+        setStep(i);
+        timers.push(setTimeout(run, 850));
+      } else {
+        timers.push(setTimeout(() => go(3), 700));
+      }
+    };
+    timers.push(setTimeout(run, 800));
+    return () => timers.forEach(clearTimeout);
+  }, [active]);
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--gray-50)' }}>
+      <div className="back-bar" style={{ justifyContent: 'center' }}>
+        <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--gray-800)' }}>Analyzing...</span>
+      </div>
+      <StepBar current={2} />
+
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '28px 24px', gap: 28,
+      }}>
+        {/* Photo preview with scan animation */}
+        <div style={{
+          width: '100%', maxWidth: 280, aspectRatio: '4/3',
+          background: 'var(--gray-200)', borderRadius: 8,
+          border: '1px solid var(--gray-300)',
+          position: 'relative', overflow: 'hidden',
+        }}>
+          <Sofa />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.04)' }} />
+          <div style={{
+            position: 'absolute', left: 0, right: 0, height: 2,
+            background: 'linear-gradient(90deg,transparent,rgba(90,191,224,.9),transparent)',
+            animation: 'scan 1.8s ease-in-out infinite alternate',
+            borderRadius: 1,
+          }} />
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ width: '100%', maxWidth: 280 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-800)' }}>
+              Analyzing your furniture
+            </span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--blue-600)' }}>{pct}%</span>
+          </div>
+          <div className="skid-progress shimmer-wrap" style={{ background: 'var(--gray-300)' }}>
+            <span className="skid-progress__fill"
+              style={{ width: `${pct}%`, transition: 'width 700ms ease' }} />
+          </div>
+        </div>
+
+        {/* Step checklist */}
+        <div style={{ width: '100%', maxWidth: 280, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {steps.map((label, i) => (
+            <div key={i} className="proc-step"
+              style={{ display: 'flex', alignItems: 'center', gap: 12, animationDelay: `${i * .12}s` }}>
+              <div style={{
+                width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: i <= step ? 'var(--action-primary)' : 'var(--gray-200)',
+                border: `2px solid ${i <= step ? 'var(--action-primary)' : 'var(--gray-300)'}`,
+                color: '#fff', transition: 'all 300ms ease',
+              }}>
+                {i <= step ? <IcoCheck /> : null}
+              </div>
+              <span style={{
+                fontSize: 14,
+                color: i <= step ? 'var(--gray-800)' : 'var(--gray-400)',
+                fontWeight: i <= step ? 700 : 400,
+                transition: 'all 300ms ease',
+              }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── SCREEN 3 · RESULTS ─────────────────────────────────────────────────── */
+function ScreenResults({ go, units, showConfidence }) {
+  const u = units === 'cm';
+  const W  = u ? '213 cm' : '84"';
+  const H  = u ? '86 cm'  : '34"';
+  const D  = u ? '91 cm'  : '36"';
+  const WT = u ? '84 kg'  : '~185 lbs';
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#111' }}>
+      {/* Dark header */}
+      <div style={{
+        height: 48, flexShrink: 0,
+        background: 'rgba(0,0,0,.75)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', padding: '0 8px', gap: 8,
+      }}>
+        <button
+          className="skid-btn skid-btn--ghost skid-btn--sm"
+          style={{ width: 36, height: 36, padding: 0, color: '#fff' }}
+          onClick={() => go(1)}>
+          <IcoBack />
+        </button>
+        <span style={{ fontWeight: 700, fontSize: 16, color: '#fff', flex: 1 }}>Scan Results</span>
+        <span className="skid-badge skid-badge--blue skid-badge--solid skid-badge--sm">
+          Sectional Sofa
+        </span>
+      </div>
+
+      {/* Photo with measurement callouts */}
+      <div className="results-photo">
+        <Sofa />
+
+        {/* Width arrow — bottom */}
+        <div style={{ position: 'absolute', bottom: 14, left: 36, right: 36, display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: 1.5, height: 8, background: 'var(--blue-400)' }} />
+          <div style={{ flex: 1, height: 1.5, background: 'var(--blue-400)' }} />
+          <div className="dim-chip" style={{ background: 'var(--blue-600)', margin: '0 3px' }}>W {W}</div>
+          <div style={{ flex: 1, height: 1.5, background: 'var(--blue-400)' }} />
+          <div style={{ width: 1.5, height: 8, background: 'var(--blue-400)' }} />
+        </div>
+
+        {/* Height arrow — right */}
+        <div style={{ position: 'absolute', top: 18, bottom: 20, right: 6, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ width: 8, height: 1.5, background: 'var(--orange-400)' }} />
+          <div style={{ flex: 1, width: 1.5, background: 'var(--orange-400)' }} />
+          <div className="dim-chip" style={{ background: 'var(--orange-600)', writingMode: 'vertical-lr', transform: 'rotate(180deg)' }}>H {H}</div>
+          <div style={{ flex: 1, width: 1.5, background: 'var(--orange-400)' }} />
+          <div style={{ width: 8, height: 1.5, background: 'var(--orange-400)' }} />
+        </div>
+
+        {/* Depth + weight chips — left */}
+        <div style={{ position: 'absolute', top: 18, left: 6, display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <div style={{
+            background: 'rgba(0,0,0,.72)', border: '1px solid rgba(255,255,255,.15)',
+            borderRadius: 5, padding: '3px 9px',
+          }}>
+            <span style={{ color: 'rgba(255,255,255,.8)', fontSize: 12, fontFamily: 'var(--font-sans)' }}>
+              D {D}
+            </span>
+          </div>
+          <div className="dim-chip" style={{ background: 'var(--blue-600)' }}>{WT}</div>
+        </div>
+      </div>
+
+      {/* Details card */}
+      <div className="results-card">
+        {showConfidence && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <span style={{
+              fontSize: 11, fontWeight: 700, color: 'var(--gray-500)',
+              textTransform: 'uppercase', letterSpacing: '.4px', whiteSpace: 'nowrap',
+            }}>Confidence</span>
+            <div className="skid-progress" style={{ flex: 1 }}>
+              <span className="skid-progress__fill" style={{ width: '89%', background: 'var(--action-primary)' }} />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--action-primary)', whiteSpace: 'nowrap' }}>89%</span>
+          </div>
+        )}
+
+        {/* Stats grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
+          {[['Width', W], ['Height', H], ['Depth', D]].map(([lbl, val]) => (
+            <div key={lbl} className="stat-cell">
+              <div style={{
+                fontSize: 10, fontWeight: 700, color: 'var(--gray-500)',
+                textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 4,
+              }}>{lbl}</div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--gray-800)' }}>{val}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Handling alert */}
+        <div className="skid-alert skid-alert--warning" style={{ marginBottom: 14 }}>
+          <IcoWarn />
+          <div className="skid-alert__body">
+            <div className="skid-alert__title">Handling Notes</div>
+            <div className="skid-alert__text">
+              Upholstered — protect from moisture. Disassembly recommended for doorways under 36".
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button
+            className="skid-btn skid-btn--primary skid-btn--lg"
+            style={{ width: '100%', gap: 8 }}
+            onClick={() => go(4)}>
+            <IcoTruck />Post Shipment
+          </button>
+          <button
+            className="skid-btn skid-btn--tertiary skid-btn--lg"
+            style={{ width: '100%', gap: 8 }}
+            onClick={() => go(4)}>
+            <IcoSave />Save to Inventory
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── SCREEN 4 · NEXT STEPS ──────────────────────────────────────────────── */
+function ScreenNextSteps({ go }) {
+  const actions = [
+    { icon: <IcoTruck />, title: 'Post a Shipment',   sub: 'Get quotes from feedback-rated carriers', primary: true  },
+    { icon: <IcoSave />,  title: 'Save to Inventory', sub: 'Add to your items list for later',        primary: false },
+    { icon: <IcoShare />, title: 'Share Estimate',    sub: 'Send specs via link or message',          primary: false },
+  ];
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--gray-50)' }}>
+      <div className="back-bar">
+        <button
+          className="skid-btn skid-btn--ghost skid-btn--sm"
+          style={{ width: 36, height: 36, padding: 0 }}
+          onClick={() => go(3)}>
+          <IcoBack />
+        </button>
+        <img src="project/assets/uship-logo-blue.svg" style={{ height: 18 }} alt="uShip" />
+      </div>
+
+      {/* Summary card */}
+      <div className="skid-card" style={{ margin: '16px 16px 0', padding: '14px 16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--gray-800)', marginBottom: 3 }}>
+              Sectional Sofa
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--gray-600)' }}>84" × 34" × 36" · ~185 lbs</div>
+          </div>
+          <span className="skid-badge skid-badge--green skid-badge--solid">89% match</span>
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <span className="skid-tag skid-tag--compact">Upholstered</span>
+          <span className="skid-tag skid-tag--compact">Medium fragility</span>
+          <span className="skid-tag skid-tag--compact">Disassemble recommended</span>
+        </div>
+      </div>
+
+      {/* Action cards */}
+      <div style={{ padding: '16px 16px 0' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>
+          What's Next?
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {actions.map((a, i) => (
+            <div key={i} style={{
+              background: a.primary ? 'var(--green-50)' : 'var(--gray-0)',
+              border: `1px solid ${a.primary ? 'var(--green-200)' : 'var(--gray-300)'}`,
+              borderRadius: 8, padding: '13px 14px',
+              display: 'flex', gap: 12, alignItems: 'center', cursor: 'pointer',
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 8,
+                background: a.primary ? 'var(--action-primary)' : 'var(--gray-100)',
+                color: a.primary ? '#fff' : 'var(--gray-600)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                {a.icon}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: a.primary ? 'var(--green-800)' : 'var(--gray-800)', marginBottom: 2 }}>
+                  {a.title}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--gray-600)' }}>{a.sub}</div>
+              </div>
+              <IcoChevron />
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 20, textAlign: 'center', paddingBottom: 16 }}>
+          <button
+            className="skid-btn skid-btn--ghost skid-btn--md"
+            style={{ gap: 8 }}
+            onClick={() => go(0)}>
+            <IcoCamera />Scan Another Item
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── ROOT APP ────────────────────────────────────────────────────────────── */
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [screen, setScreen] = useState(0);
+  const go = (n) => setScreen(n);
+
+  const isDark = (s) => [1, 3].includes(s);
+
+  return (
+    <>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        minHeight: '100vh', background: 'var(--gray-200)', padding: '32px 16px',
+      }}>
+        <div className="phone">
+          <div className="dynamic-island" />
+
+          {/* Status bar */}
+          <div className="status-bar" style={{
+            background: screen === 3 ? 'transparent' : 'var(--gray-0)',
+          }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: isDark(screen) ? '#fff' : 'var(--gray-800)' }}>
+              9:41
+            </span>
+            <div style={{ flex: 1 }} />
+            <Battery dark={isDark(screen)} />
+          </div>
+
+          {/* Screens */}
+          <div className="screens">
+            {[
+              <ScreenHome go={go} />,
+              <ScreenCapture go={go} />,
+              <ScreenProcessing go={go} active={screen === 2} />,
+              <ScreenResults go={go} units={t.units} showConfidence={t.showConfidence} />,
+              <ScreenNextSteps go={go} />,
+            ].map((s, i) => (
+              <div key={i} className={`screen${i === screen ? ' active' : i < screen ? ' behind' : ''}`}>
+                {s}
+              </div>
+            ))}
+          </div>
+
+          {/* Home bar */}
+          <div className="home-bar" style={{
+            background: isDark(screen) ? 'rgba(0,0,0,.85)' : 'var(--gray-0)',
+          }}>
+            <div style={{
+              width: 134, height: 5, borderRadius: 3,
+              background: isDark(screen) ? 'rgba(255,255,255,.25)' : 'var(--gray-300)',
+            }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Tweaks panel */}
+      <TweaksPanel>
+        <TweakSection label="Measurements" />
+        <TweakRadio
+          label="Units"
+          value={t.units}
+          options={['in', 'cm']}
+          onChange={v => setTweak('units', v)} />
+        <TweakSection label="Results screen" />
+        <TweakToggle
+          label="Show confidence score"
+          value={t.showConfidence}
+          onChange={v => setTweak('showConfidence', v)} />
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
