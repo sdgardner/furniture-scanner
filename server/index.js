@@ -31,21 +31,29 @@ app.post('/analyze', async (req, res) => {
           },
           {
             type: 'text',
-            text: `You are a furniture analysis expert helping shippers estimate item specs.
-Analyze this image and respond with ONLY valid JSON in this exact format:
+            text: `You are a furniture measurement expert helping shippers get accurate size and weight estimates.
+
+Analyze this image carefully using every visual clue available:
+- If a coin is visible, use it as a scale reference (a US quarter is 0.955" diameter)
+- Use standard room features for scale: doorways are typically 80" tall and 32-36" wide, ceiling heights are typically 96-108", electrical outlets are 4.5" tall, light switches are 4.5" tall
+- Use the furniture's own proportions — drawer heights, cushion depths, leg heights all have standard sizes
+- Look at flooring tiles/planks, baseboards, and wall features for additional scale
+- Cross-check your estimates: does the weight make sense for the material and size? (solid wood = ~45 lbs/cu ft, upholstered = ~25 lbs/cu ft, metal = ~100 lbs/cu ft)
+
+Respond with ONLY valid JSON, no markdown, no code fences:
 {
-  "itemType": "name of the furniture item",
-  "width": "estimated width in inches (number only)",
-  "height": "estimated height in inches (number only)",
-  "depth": "estimated depth in inches (number only)",
-  "weightLbs": "estimated weight in lbs (number only)",
-  "confidence": "confidence percentage 0-100 (number only)",
+  "itemType": "specific name of the furniture item",
+  "width": <width in inches as a number>,
+  "height": <height in inches as a number>,
+  "depth": <depth in inches as a number>,
+  "weightLbs": <estimated weight in lbs as a number>,
+  "confidence": <confidence 0-100 as a number>,
   "fragility": "Low | Medium | High",
-  "handlingNotes": "one sentence of handling advice",
+  "handlingNotes": "one practical sentence of handling advice for shippers",
   "tags": ["tag1", "tag2", "tag3"]
 }
 If you cannot identify furniture in the image, return:
-{ "error": "No furniture detected" }`
+{"error": "No furniture detected"}`
           }
         ]
       }]
