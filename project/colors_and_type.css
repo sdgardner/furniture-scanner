@@ -1,0 +1,205 @@
+/* ============================================================
+   Skid · uShip Design System
+   Fonts + type utility classes + legacy-alias shims.
+   Primitives & semantic colors live in tokens.css (auto-generated).
+   ============================================================ */
+
+@import url("tokens.css");
+
+/* ---------- LATO (self-hosted brand fonts) ----------
+   Lato is Skid's only runtime typeface. No monospace / Roboto Mono.
+   Numerics use Lato with tabular-nums (see .skid-num-* classes). */
+
+@font-face { font-family: "Lato"; font-style: normal; font-weight: 100;
+  src: url("fonts/Lato-Thin.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Lato"; font-style: italic; font-weight: 100;
+  src: url("fonts/Lato-ThinItalic.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Lato"; font-style: normal; font-weight: 300;
+  src: url("fonts/Lato-Light.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Lato"; font-style: italic; font-weight: 300;
+  src: url("fonts/Lato-LightItalic.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Lato"; font-style: normal; font-weight: 400;
+  src: url("fonts/Lato-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Lato"; font-style: italic; font-weight: 400;
+  src: url("fonts/Lato-Italic.ttf") format("truetype"); font-display: swap; }
+/* Lato has no native 600 file; map Semibold → Bold so helper/semibold (600)
+   resolves to a real face instead of a synthesized one. */
+@font-face { font-family: "Lato"; font-style: normal; font-weight: 600;
+  src: url("fonts/Lato-Bold.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Lato"; font-style: normal; font-weight: 700;
+  src: url("fonts/Lato-Bold.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Lato"; font-style: italic; font-weight: 700;
+  src: url("fonts/Lato-BoldItalic.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Lato"; font-style: normal; font-weight: 900;
+  src: url("fonts/Lato-Black.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Lato"; font-style: italic; font-weight: 900;
+  src: url("fonts/Lato-BlackItalic.ttf") format("truetype"); font-display: swap; }
+
+
+/* ============================================================
+   COMPAT SHIMS — legacy semantic names → tokens.css equivalents
+   These exist so files written before the Figma-aligned token
+   refactor keep rendering. New work should use tokens.css names.
+   ============================================================ */
+
+:root {
+  /* legacy text */
+  --text-on-fill:        var(--text-inverse);
+  --text-link:           var(--link-surface-01);
+
+  /* legacy borders */
+  --border-focus:        var(--border-focus-ring);
+
+  /* legacy interactive (blue) → new --action-secondary-* */
+  --interactive-default: var(--action-secondary);
+  --interactive-hover:   var(--action-secondary-hover);
+  --interactive-pressed: var(--action-secondary-pressed);
+  --interactive-disabled:var(--gray-400);
+
+  /* legacy feedback → new --status-*-text */
+  --feedback-success:    var(--status-success-text);
+  --feedback-warning:    var(--status-warning-text);
+  --feedback-error:      var(--status-error-text);
+  --feedback-info:       var(--status-info-text);
+
+  /* legacy blue-950 used in some dark-bg panels — alias to blue-900 (spec) */
+  --blue-950: var(--blue-900);
+}
+
+/* ============================================================
+   ELEMENT DEFAULTS + TYPE SCALE CLASSES
+   ============================================================ */
+
+body, .skid-body {
+  font-family: var(--font-sans);
+  font-size: var(--body-md-size);
+  line-height: var(--body-md-line);
+  color: var(--text-primary);
+  /* Page background is ALWAYS layer-01. layer-02 = components,
+     layer-03 = high-emphasis call-outs. Never flip these. */
+  background: var(--surface-layer-01);
+}
+
+h1, .skid-h1 { font: var(--h1-weight) var(--h1-size)/var(--h1-line) var(--font-sans); margin: 0; color: var(--text-primary); }
+h2, .skid-h2 { font: var(--h2-weight) var(--h2-size)/var(--h2-line) var(--font-sans); margin: 0; color: var(--text-primary); }
+h3, .skid-h3 { font: var(--h3-weight) var(--h3-size)/var(--h3-line) var(--font-sans); margin: 0; color: var(--text-primary); }
+h4, .skid-h4 { font: var(--h4-weight) var(--h4-size)/var(--h4-line) var(--font-sans); margin: 0; color: var(--text-primary); }
+h5, .skid-h5 { font: var(--h5-weight) var(--h5-size)/var(--h5-line) var(--font-sans); margin: 0; color: var(--text-primary); }
+
+.skid-body-md { font: var(--body-md-weight) var(--body-md-size)/var(--body-md-line) var(--font-sans); }
+.skid-body-sm { font: var(--body-sm-weight) var(--body-sm-size)/var(--body-sm-line) var(--font-sans); color: var(--text-secondary); }
+.skid-label   { font: var(--body-label-weight) var(--body-label-size)/var(--body-label-line) var(--font-sans); color: var(--text-label); }
+.skid-helper  { font: 400 var(--helper-size)/var(--helper-line) var(--font-sans); color: var(--text-helper); }
+.skid-helper-strong { font: 600 var(--helper-size)/var(--helper-line) var(--font-sans); color: var(--text-helper); }
+
+.skid-button-text { font: var(--button-weight) var(--button-size)/var(--button-line) var(--font-sans); }
+.skid-badge-sm { font: 700 var(--badge-sm-size)/var(--badge-sm-line) var(--font-sans); letter-spacing: var(--badge-sm-track); text-transform: uppercase; }
+.skid-badge-lg { font: 700 var(--badge-lg-size)/var(--badge-lg-line) var(--font-sans); letter-spacing: var(--badge-lg-track); }
+
+.skid-num-xs { font: var(--num-xs-weight) var(--num-xs-size)/var(--num-xs-line) var(--font-sans); letter-spacing: var(--num-xs-track); font-variant-numeric: tabular-nums; }
+.skid-num-sm { font: var(--num-sm-weight) var(--num-sm-size)/var(--num-sm-line) var(--font-sans); letter-spacing: var(--num-sm-track); font-variant-numeric: tabular-nums; }
+.skid-num-md { font: var(--num-md-weight) var(--num-md-size)/var(--num-md-line) var(--font-sans); letter-spacing: var(--num-md-track); font-variant-numeric: tabular-nums; }
+.skid-num-lg { font: var(--num-lg-weight) var(--num-lg-size)/var(--num-lg-line) var(--font-sans); letter-spacing: var(--num-lg-track); font-variant-numeric: tabular-nums; }
+
+/* .skid-mono is intentionally removed — Skid does not use a mono face.
+   Set numerics in Lato with tabular-nums via .skid-num-xs/sm/md/lg. */
+
+/* Links — standalone (no underline) + inline (underlined) */
+a, .skid-link { color: var(--text-link); text-decoration: underline; text-underline-offset: 2px; }
+a:hover, .skid-link:hover { color: var(--blue-800); }
+
+.skid-link-sm, .skid-link-md, .skid-link-lg { color: var(--text-link); text-decoration: none; }
+.skid-link-sm:hover, .skid-link-md:hover, .skid-link-lg:hover { color: var(--blue-800); text-decoration: underline; text-underline-offset: 2px; }
+.skid-link-sm { font: var(--link-sm-weight) var(--link-sm-size)/var(--link-sm-line) var(--font-sans); }
+.skid-link-md { font: var(--link-md-weight) var(--link-md-size)/var(--link-md-line) var(--font-sans); }
+.skid-link-lg { font: var(--link-lg-weight) var(--link-lg-size)/var(--link-lg-line) var(--font-sans); }
+
+.skid-link-sm-inline, .skid-link-md-inline, .skid-link-lg-inline { color: var(--text-link); text-decoration: underline; text-underline-offset: 2px; }
+.skid-link-sm-inline:hover, .skid-link-md-inline:hover, .skid-link-lg-inline:hover { color: var(--blue-800); }
+.skid-link-sm-inline { font: var(--link-sm-weight) var(--link-sm-size)/var(--link-sm-line) var(--font-sans); }
+.skid-link-md-inline { font: var(--link-md-weight) var(--link-md-size)/var(--link-md-line) var(--font-sans); }
+.skid-link-lg-inline { font: var(--link-lg-weight) var(--link-lg-size)/var(--link-lg-line) var(--font-sans); }
+
+
+/* ============================================================
+   DARK MODE — apply via <html data-theme="dark">
+   Skid's dark mode (per Figma demo-dark frames) flips grayscale
+   primitives — surfaces darken to rgb(30,30,30) and rgb(43,48,56),
+   text inverts to near-white. Brand Blue, action Green, and
+   destructive Red stay roughly the same hue, with the 50/100/800/900
+   stops nudged so chips read on dark surfaces.
+   ============================================================ */
+
+[data-theme="dark"] {
+  --gray-0:   rgb(30,30,30);
+  --gray-50:  rgb(20,20,22);
+  --gray-100: rgb(43,48,56);
+  --gray-150: rgb(53,53,53);
+  --gray-200: rgb(75,85,99);
+  --gray-300: rgb(107,114,128);
+  --gray-400: rgb(138,141,151);
+  --gray-500: rgb(156,163,175);
+  --gray-600: rgb(205,210,215);
+  --gray-700: rgb(229,231,235);
+  --gray-800: rgb(244,246,248);
+  --gray-900: rgb(249,250,251);
+  --gray-950: rgb(255,255,255);
+
+  --blue-50:   rgb(8,33,52);
+  --blue-100:  rgb(11,53,82);
+  --blue-200:  rgb(11,75,116);
+  --blue-800:  rgb(159,206,228);
+  --blue-900:  rgb(199,224,238);
+
+  --green-50:  rgb(6,30,15);
+  --green-100: rgb(10,53,25);
+  --green-800: rgb(86,166,116);
+  --green-900: rgb(132,189,153);
+
+  --red-50:    rgb(45,16,16);
+  --red-100:   rgb(70,22,22);
+  --red-800:   rgb(225,135,135);
+  --red-900:   rgb(241,178,178);
+
+  --orange-50: rgb(45,28,8);
+  --orange-100:rgb(70,42,12);
+  --orange-900:rgb(245,206,140);
+
+  --purple-50: rgb(33,22,52);
+  --purple-100:rgb(54,32,82);
+  --purple-900:rgb(195,178,217);
+
+  --text-primary:   var(--gray-800);
+  --text-secondary: var(--gray-700);
+  --text-tertiary:  var(--gray-500);
+  --text-disabled:  var(--gray-400);
+  --text-helper:    var(--gray-600);
+  --text-on-fill:   var(--gray-950);
+  --text-link:      rgb(116,184,213);
+
+  --surface-layer-01: var(--gray-0);
+  --surface-layer-02: var(--gray-50);
+  --surface-layer-03: var(--gray-100);
+  --surface-shell:    var(--gray-0);
+
+  --border-interactive: var(--gray-300);
+  --border-strong:      var(--gray-500);
+  --border-soft:        var(--gray-200);
+  --border-disabled:    var(--gray-300);
+  --border-focus:       rgb(90,191,224);
+
+  --icon-default: var(--gray-700);
+
+  --focus-ring: 0 0 0 2px var(--gray-0), 0 0 0 4px rgb(90,191,224);
+
+  --elev-1: 0 1px 2px rgba(0,0,0,0.40), 0 1px 1px rgba(0,0,0,0.30);
+  --elev-2: 0 2px 4px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.30);
+  --elev-3: 0 4px 12px rgba(0,0,0,0.50), 0 2px 4px rgba(0,0,0,0.30);
+  --elev-4: 0 8px 24px rgba(0,0,0,0.55), 0 4px 8px rgba(0,0,0,0.30);
+  --elev-overlay: 0 16px 40px rgba(0,0,0,0.65), 0 4px 12px rgba(0,0,0,0.40);
+}
+
+[data-theme="dark"] body, [data-theme="dark"] .skid-body {
+  background: var(--gray-50);
+  color: var(--text-primary);
+}

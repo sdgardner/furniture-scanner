@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Furniture Scanner — Wireframes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Caveat', cursive; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+// ─── TOKENS ────────────────────────────────────────────────────────────────
+const BLUE   = '#0073AD';
+const BLUELT = '#e8f4fb';
+const GREEN  = '#006C21';
+const DARK   = '#1a1a1a';
+const MID    = '#666';
+const SOFT   = '#999';
+const LINE   = '#d0d0d0';
+const BGPAGE = '#f8f7f5';
+
+const HATCH_BG = 'repeating-linear-gradient(45deg,#d8d5cf 0,#d8d5cf 1px,transparent 0,transparent 50%) 0 0/10px 10px';
+const CAM_BG   = 'repeating-linear-gradient(45deg,#1c1c1c 0,#1c1c1c 1px,#111 0,#111 8px)';
+
+// ─── SHARED PRIMITIVES ─────────────────────────────────────────────────────
+
+function Phone({ children, height = 560 }) {
+  return (
+    <div style={{
+      width: 260, height,
+      background: '#fff',
+      border: `3px solid ${DARK}`,
+      borderRadius: 32,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden',
+      position: 'relative',
+      boxShadow: `3px 3px 0 0 ${LINE}`,
+      flexShrink: 0,
+    }}>
+      {/* Status bar */}
+      <div style={{ height: 30, background: DARK, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', flexShrink: 0 }}>
+        <span style={{ fontFamily: 'Caveat', fontSize: 11, color: '#fff', fontWeight: 600 }}>9:41</span>
+        <div style={{ width: 48, height: 10, background: '#333', borderRadius: 5 }} />
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <div style={{ width: 12, height: 8, border: '1.5px solid #aaa', borderRadius: 1, position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: '1px 1px 1px 1px', background: '#aaa', width: '70%' }} />
+          </div>
+        </div>
+      </div>
+      <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        {children}
+      </div>
+      {/* Home bar */}
+      <div style={{ height: 18, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', borderTop: `1.5px solid #eee`, flexShrink: 0 }}>
+        <div style={{ width: 72, height: 4, background: '#ccc', borderRadius: 2 }} />
+      </div>
+    </div>
+  );
+}
+
+function Hatch({ style, label }) {
+  return (
+    <div style={{ background: HATCH_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', ...style }}>
+      {label && <span style={{ fontFamily: 'Caveat', fontSize: 12, color: SOFT, background: 'rgba(255,255,255,0.6)', padding: '2px 6px', borderRadius: 3 }}>{label}</span>}
+    </div>
+  );
+}
+
+function Btn({ children, primary, outline, small, full, style = {} }) {
+  return (
+    <div style={{
+      background: primary ? BLUE : outline ? 'transparent' : 'transparent',
+      color: primary ? '#fff' : DARK,
+      border: `2px solid ${primary ? BLUE : DARK}`,
+      borderRadius: 6,
+      padding: small ? '4px 10px' : '9px 16px',
+      fontFamily: 'Caveat',
+      fontSize: small ? 13 : 15,
+      fontWeight: 700,
+      textAlign: 'center',
+      width: full ? '100%' : undefined,
+      cursor: 'pointer',
+      lineHeight: 1.2,
+      ...style,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function Chip({ children, color = 'blue' }) {
+  const colors = {
+    blue:   { bg: BLUE,  fg: '#fff' },
+    green:  { bg: GREEN, fg: '#fff' },
+    orange: { bg: '#c97200', fg: '#fff' },
+    gray:   { bg: '#eee', fg: DARK },
+  };
+  const { bg, fg } = colors[color] || colors.blue;
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center',
+      background: bg, color: fg,
+      borderRadius: 4, padding: '2px 7px',
+      fontFamily: 'Caveat', fontSize: 11, fontWeight: 700,
+      letterSpacing: 0.4, textTransform: 'uppercase',
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function Stat({ label, value, unit }) {
+  return (
+    <div style={{
+      border: `2px solid ${DARK}`, borderRadius: 8,
+      padding: '8px 10px', textAlign: 'center', background: '#fff',
+    }}>
+      <div style={{ fontFamily: 'Caveat', fontSize: 10, color: SOFT, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 1 }}>{label}</div>
+      <div style={{ fontFamily: 'Caveat', fontSize: 22, fontWeight: 700, color: DARK, lineHeight: 1 }}>{value}</div>
+      {unit && <div style={{ fontFamily: 'Caveat', fontSize: 11, color: SOFT }}>{unit}</div>}
+    </div>
+  );
+}
+
+function ConfBar({ pct }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ fontFamily: 'Caveat', fontSize: 11, color: SOFT, textTransform: 'uppercase', letterSpacing: 0.5 }}>Confidence</div>
+      <div style={{ flex: 1, height: 6, background: '#eee', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: GREEN, borderRadius: 3 }} />
+      </div>
+      <div style={{ fontFamily: 'Caveat', fontSize: 12, color: GREEN, fontWeight: 700 }}>{pct}%</div>
+    </div>
+  );
+}
+
+function StepBar({ current, labels }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+        {labels.map((lbl, i) => (
+          <React.Fragment key={i}>
+            <div style={{
+              width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+              background: i < current ? GREEN : i === current ? BLUE : 'transparent',
+              border: `2px solid ${i < current ? GREEN : i === current ? BLUE : LINE}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'Caveat', fontSize: 12, color: i <= current ? '#fff' : SOFT, fontWeight: 700,
+            }}>
+              {i < current ? '✓' : i + 1}
+            </div>
+            {i < labels.length - 1 && (
+              <div style={{ flex: 1, height: 2, background: i < current ? GREEN : LINE }} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
+        {labels.map((lbl, i) => (
+          <div key={i} style={{ fontFamily: 'Caveat', fontSize: 10, color: i === current ? BLUE : SOFT, width: 44, textAlign: i === 0 ? 'left' : i === labels.length - 1 ? 'right' : 'center' }}>{lbl}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── WIREFRAME A: AR Live Overlay ──────────────────────────────────────────
+function WireA() {
+  return (
+    <Phone>
+      <div style={{ position: 'absolute', inset: 0, background: '#111' }}>
+        <div style={{ position: 'absolute', inset: 0, background: CAM_BG }} />
+
+        {/* Top nav */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 2 }}>
+          <div style={{ background: 'rgba(0,0,0,0.55)', borderRadius: 6, padding: '4px 10px' }}>
+            <span style={{ fontFamily: 'Caveat', fontSize: 14, color: '#fff', fontWeight: 700 }}>Scan Item</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ background: 'rgba(0,0,0,0.55)', borderRadius: 6, padding: '4px 8px', fontFamily: 'Caveat', fontSize: 12, color: '#ccc' }}>Flash</div>
+            <div style={{ background: 'rgba(0,0,0,0.55)', borderRadius: 6, padding: '4px 8px', fontFamily: 'Caveat', fontSize: 12, color: '#ccc' }}>✕</div>
+          </div>
+        </div>
+
+        {/* Bounding box */}
+        <div style={{ position: 'absolute', top: 62, left: 24, right: 24, bottom: 148, border: `2.5px dashed ${BLUE}`, borderRadius: 4 }}>
+          {/* Corner handles */}
+          {[{top:-5,left:-5},{top:-5,right:-5},{bottom:-5,left:-5},{bottom:-5,right:-5}].map((pos, i) => (
+            <div key={i} style={{ position: 'absolute', width: 10, height: 10, background: BLUE, borderRadius: 2, ...pos }} />
+          ))}
+
+          {/* Width callout */}
+          <div style={{ position: 'absolute', top: -26, left: 0, right: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ flex: 1, height: 1.5, background: BLUE }} />
+            <span style={{ fontFamily: 'Caveat', fontSize: 12, color: BLUE, fontWeight: 700, whiteSpace: 'nowrap' }}>← 84" →</span>
+            <div style={{ flex: 1, height: 1.5, background: BLUE }} />
+          </div>
+
+          {/* Height callout */}
+          <div style={{ position: 'absolute', top: 0, bottom: 0, right: -46, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <div style={{ width: 1.5, flex: 1, background: '#ff9900' }} />
+            <span style={{ fontFamily: 'Caveat', fontSize: 12, color: '#ff9900', fontWeight: 700, writingMode: 'vertical-lr', transform: 'rotate(180deg)', whiteSpace: 'nowrap' }}>34"</span>
+            <div style={{ width: 1.5, flex: 1, background: '#ff9900' }} />
+          </div>
+
+          {/* Weight bubble */}
+          <div style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', border: `1.5px solid ${BLUE}`, borderRadius: 20, padding: '4px 12px', display: 'flex', gap: 8, alignItems: 'center', whiteSpace: 'nowrap' }}>
+            <span style={{ fontFamily: 'Caveat', fontSize: 13, color: '#fff', fontWeight: 700 }}>~185 lbs</span>
+            <div style={{ width: 1, height: 12, background: '#555' }} />
+            <span style={{ fontFamily: 'Caveat', fontSize: 12, color: BLUE }}>89% conf.</span>
+          </div>
+
+          {/* Depth badge */}
+          <div style={{ position: 'absolute', top: 12, left: 10, background: 'rgba(0,0,0,0.65)', borderRadius: 6, padding: '3px 8px' }}>
+            <span style={{ fontFamily: 'Caveat', fontSize: 12, color: '#fff' }}>Depth: 36"</span>
+          </div>
+        </div>
+
+        {/* Bottom sheet */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.88)', borderTop: `2px solid ${BLUE}`, padding: '10px 12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <div>
+              <div style={{ fontFamily: 'Caveat', fontSize: 16, color: '#fff', fontWeight: 700, marginBottom: 2 }}>Sectional Sofa</div>
+              <div style={{ fontFamily: 'Caveat', fontSize: 11, color: '#aaa' }}>Living room · Upholstered</div>
+            </div>
+            <Chip color="blue">Detected</Chip>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Btn primary full style={{ flex: 2 }}>Post Shipment</Btn>
+            <Btn full style={{ flex: 1, color: '#fff', borderColor: '#555' }}>Save</Btn>
+          </div>
+        </div>
+      </div>
+    </Phone>
+  );
+}
+
+// ─── WIREFRAME B: Guided Step-by-Step ─────────────────────────────────────
+function WireB() {
+  return (
+    <Phone>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+        {/* Header */}
+        <div style={{ padding: '10px 14px 8px', borderBottom: `2px solid #eee` }}>
+          <div style={{ fontFamily: 'Caveat', fontSize: 18, fontWeight: 700, color: DARK, marginBottom: 8 }}>Scan Furniture</div>
+          <StepBar current={1} labels={['Position','Capture','Review']} />
+        </div>
+
+        {/* Camera */}
+        <div style={{ flex: 1, position: 'relative', background: '#111' }}>
+          <div style={{ position: 'absolute', inset: 0, background: CAM_BG }} />
+
+          {/* Corner guides */}
+          {[
+            { top: 20, left: 20, borderTop: `3px solid #fff`, borderLeft: `3px solid #fff` },
+            { top: 20, right: 20, borderTop: `3px solid #fff`, borderRight: `3px solid #fff` },
+            { bottom: 52, left: 20, borderBottom: `3px solid #fff`, borderLeft: `3px solid #fff` },
+            { bottom: 52, right: 20, borderBottom: `3px solid #fff`, borderRight: `3px solid #fff` },
+          ].map((pos, i) => (
+            <div key={i} style={{ position: 'absolute', width: 20, height: 20, ...pos }} />
+          ))}
+
+          {/* Instruction bubble */}
+          <div style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%,-50%)', background: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: '8px 14px', textAlign: 'center', width: 180 }}>
+            <div style={{ fontFamily: 'Caveat', fontSize: 13, color: '#fff', fontWeight: 700 }}>Center the item in frame</div>
+            <div style={{ fontFamily: 'Caveat', fontSize: 11, color: '#aaa', marginTop: 2 }}>Keep 6" clearance on all sides</div>
+          </div>
+
+          {/* Shutter row */}
+          <div style={{ position: 'absolute', bottom: 10, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: `2px solid #555`, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontFamily: 'Caveat', fontSize: 14, color: '#aaa' }}>↺</span>
+            </div>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#fff', border: `3px solid #ddd`, boxShadow: '0 0 0 5px rgba(255,255,255,0.25)' }} />
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: `2px solid #555`, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontFamily: 'Caveat', fontSize: 14, color: '#aaa' }}>⚡</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tip strip */}
+        <div style={{ padding: '7px 12px', background: '#fffdf0', borderTop: `1.5px solid #f0e060` }}>
+          <div style={{ fontFamily: 'Caveat', fontSize: 12, color: '#7a6000' }}>Tip: place a coin next to item for better scale accuracy</div>
+        </div>
+      </div>
+    </Phone>
+  );
+}
+
+// ─── WIREFRAME C: Web Upload ────────────────────────────────────────────────
+function WireC() {
+  return (
+    <div style={{ width: 380, background: '#fff', border: `3px solid ${DARK}`, borderRadius: 12, overflow: 'hidden', boxShadow: `3px 3px 0 0 ${LINE}` }}>
+      {/* Browser chrome */}
+      <div style={{ height: 34, background: '#f2f2f2', borderBottom: `2px solid #ccc`, display: 'flex', alignItems: 'center', gap: 6, padding: '0 10px' }}>
+        {['#ff5f56','#ffbd2e','#27c93f'].map(c => <div key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />)}
+        <div style={{ flex: 1, height: 20, background: '#fff', border: '1.5px solid #ccc', borderRadius: 10, margin: '0 8px', display: 'flex', alignItems: 'center', padding: '0 10px' }}>
+          <span style={{ fontFamily: 'Caveat', fontSize: 11, color: '#aaa' }}>uship.com/scan</span>
+        </div>
+      </div>
+
+      {/* App nav */}
+      <div style={{ height: 44, borderBottom: `2px solid ${DARK}`, display: 'flex', alignItems: 'center', padding: '0 14px', gap: 12 }}>
+        <div style={{ fontFamily: 'Lato', fontSize: 15, fontWeight: 700, color: BLUE }}>uShip</div>
+        <div style={{ flex: 1 }} />
+        <div style={{ fontFamily: 'Caveat', fontSize: 13, color: MID }}>My Items</div>
+        <Btn primary small>Post Shipment</Btn>
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: '16px' }}>
+        <div style={{ fontFamily: 'Caveat', fontSize: 22, fontWeight: 700, color: DARK, marginBottom: 3 }}>Scan Your Furniture</div>
+        <div style={{ fontFamily: 'Caveat', fontSize: 13, color: MID, marginBottom: 14 }}>Upload a photo — we'll estimate weight and dimensions in seconds</div>
+
+        {/* Drop zone */}
+        <div style={{ border: `2.5px dashed ${BLUE}`, borderRadius: 10, padding: '24px 16px', textAlign: 'center', background: BLUELT, marginBottom: 10 }}>
+          <div style={{ fontFamily: 'Caveat', fontSize: 32, marginBottom: 6, lineHeight: 1 }}>[ photo ]</div>
+          <div style={{ fontFamily: 'Caveat', fontSize: 16, fontWeight: 700, color: DARK, marginBottom: 4 }}>Drop a photo here</div>
+          <div style={{ fontFamily: 'Caveat', fontSize: 12, color: SOFT, marginBottom: 10 }}>JPG, PNG, HEIC — up to 20 MB</div>
+          <div style={{ display: 'inline-block' }}><Btn primary small>Browse Files</Btn></div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <div style={{ flex: 1, height: 1.5, background: '#eee' }} />
+          <span style={{ fontFamily: 'Caveat', fontSize: 12, color: '#bbb' }}>or use your camera</span>
+          <div style={{ flex: 1, height: 1.5, background: '#eee' }} />
+        </div>
+        <Btn full style={{ marginBottom: 14 }}>Open Camera</Btn>
+
+        {/* Tips */}
+        <div style={{ background: '#fffdf0', border: `1.5px solid #f0d060`, borderRadius: 8, padding: '8px 12px' }}>
+          <div style={{ fontFamily: 'Caveat', fontSize: 13, fontWeight: 700, color: DARK, marginBottom: 4 }}>Best results</div>
+          {['Full item visible in frame','Good lighting, minimal shadow','Clear background if possible'].map(t => (
+            <div key={t} style={{ fontFamily: 'Caveat', fontSize: 12, color: MID, marginBottom: 2 }}>• {t}</div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── WIREFRAME D: Instant Card Result ─────────────────────────────────────
+function WireD() {
+  return (
+    <Phone>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: BGPAGE }}>
+        {/* Photo thumbnail */}
+        <div style={{ height: 130, position: 'relative', flexShrink: 0 }}>
+          <Hatch style={{ height: '100%' }} label="[photo]" />
+          <div style={{ position: 'absolute', bottom: 8, left: 10, right: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Chip color="gray">Sectional Sofa</Chip>
+            <div style={{ fontFamily: 'Caveat', fontSize: 11, color: '#fff', background: 'rgba(0,0,0,0.55)', borderRadius: 4, padding: '2px 6px' }}>May 27, 2026</div>
+          </div>
+        </div>
+
+        {/* Card */}
+        <div style={{ flex: 1, padding: '10px 12px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <ConfBar pct={89} />
+
+          {/* Stats 2×2 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+            <Stat label="Est. Weight" value="~185" unit="lbs" />
+            <Stat label="Width" value='84"' />
+            <Stat label="Height" value='34"' />
+            <Stat label="Depth" value='36"' />
+          </div>
+
+          {/* Handling note */}
+          <div style={{ border: `2px solid #f0d060`, borderRadius: 8, padding: '8px 10px', background: '#fffdf0' }}>
+            <div style={{ fontFamily: 'Caveat', fontSize: 13, fontWeight: 700, color: DARK, marginBottom: 2 }}>Handling Notes</div>
+            <div style={{ fontFamily: 'Caveat', fontSize: 12, color: MID }}>Upholstered — protect from moisture. Disassembly recommended for doorways &lt; 36".</div>
+          </div>
+
+          {/* CTAs */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <Btn primary full>Post Shipment</Btn>
+            <Btn full>Save to Inventory</Btn>
+          </div>
+        </div>
+      </div>
+    </Phone>
+  );
+}
+
+// ─── WIREFRAME E: Photo + Dimension Callouts ───────────────────────────────
+function WireE() {
+  return (
+    <Phone>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#111' }}>
+        {/* Top bar */}
+        <div style={{ padding: '8px 12px', background: 'rgba(0,0,0,0.85)', borderBottom: `1.5px solid #333`, flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontFamily: 'Caveat', fontSize: 16, color: '#fff', fontWeight: 700 }}>Sectional Sofa</div>
+            <Chip color="green">89% Match</Chip>
+          </div>
+          <div style={{ fontFamily: 'Caveat', fontSize: 11, color: '#888', marginTop: 1 }}>Tap any measurement to edit</div>
+        </div>
+
+        {/* Photo canvas */}
+        <div style={{ flex: 1, position: 'relative' }}>
+          <Hatch style={{ height: '100%', background: '#1e1e1e' }} label="[furniture photo]" />
+
+          {/* Width arrow — bottom */}
+          <div style={{ position: 'absolute', bottom: 20, left: 14, right: 14, display: 'flex', alignItems: 'center', gap: 0 }}>
+            <div style={{ width: 1.5, height: 8, background: BLUE }} />
+            <div style={{ flex: 1, height: 1.5, background: BLUE }} />
+            <div style={{ background: BLUE, borderRadius: 4, padding: '3px 10px' }}>
+              <span style={{ fontFamily: 'Caveat', fontSize: 13, color: '#fff', fontWeight: 700 }}>W 84"</span>
+            </div>
+            <div style={{ flex: 1, height: 1.5, background: BLUE }} />
+            <div style={{ width: 1.5, height: 8, background: BLUE }} />
+          </div>
+
+          {/* Height arrow — right side */}
+          <div style={{ position: 'absolute', top: 16, bottom: 42, right: 12, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ width: 8, height: 1.5, background: '#ff9900' }} />
+            <div style={{ width: 1.5, flex: 1, background: '#ff9900' }} />
+            <div style={{ background: '#ff9900', borderRadius: 4, padding: '3px 7px', writingMode: 'vertical-lr', transform: 'rotate(180deg)' }}>
+              <span style={{ fontFamily: 'Caveat', fontSize: 13, color: '#fff', fontWeight: 700 }}>H 34"</span>
+            </div>
+            <div style={{ width: 1.5, flex: 1, background: '#ff9900' }} />
+            <div style={{ width: 8, height: 1.5, background: '#ff9900' }} />
+          </div>
+
+          {/* Floating chips */}
+          <div style={{ position: 'absolute', top: 16, left: 12, display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <div style={{ background: 'rgba(0,0,0,0.72)', border: `1.5px solid #444`, borderRadius: 7, padding: '4px 10px' }}>
+              <span style={{ fontFamily: 'Caveat', fontSize: 12, color: '#fff' }}>Depth 36"</span>
+            </div>
+            <div style={{ background: `rgba(0,115,173,0.88)`, borderRadius: 7, padding: '4px 10px' }}>
+              <span style={{ fontFamily: 'Caveat', fontSize: 13, color: '#fff', fontWeight: 700 }}>~185 lbs</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom tray */}
+        <div style={{ background: 'rgba(0,0,0,0.9)', padding: '10px 12px', borderTop: `1.5px solid #333`, flexShrink: 0 }}>
+          <div style={{ fontFamily: 'Caveat', fontSize: 11, color: '#888', marginBottom: 6 }}>Upholstered · Medium fragility · Recommend disassembly</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Btn primary full style={{ flex: 2 }}>Post Shipment</Btn>
+            <Btn full style={{ flex: 1, color: '#ccc', borderColor: '#555' }}>Edit</Btn>
+          </div>
+        </div>
+      </div>
+    </Phone>
+  );
+}
+
+// ─── WIREFRAME F: Detailed Specs List ─────────────────────────────────────
+function WireF() {
+  const rows = [
+    ['Category',    'Sectional Sofa',  false],
+    ['Width',       '84"',             false],
+    ['Height',      '34"',             false],
+    ['Depth',       '36"',             false],
+    ['Est. Weight', '~185 lbs',        false],
+    ['Material',    'Upholstered',     false],
+    ['Fragility',   'Medium',          false],
+    ['Confidence',  '89%',             true ],
+  ];
+
+  return (
+    <Phone>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+        {/* Item header */}
+        <div style={{ padding: '10px 12px', borderBottom: `2px solid #eee`, display: 'flex', gap: 10, alignItems: 'flex-start', flexShrink: 0 }}>
+          <Hatch style={{ width: 56, height: 56, borderRadius: 6, border: `2px solid #ddd`, flexShrink: 0 }} />
+          <div>
+            <div style={{ fontFamily: 'Caveat', fontSize: 17, fontWeight: 700, color: DARK, marginBottom: 2 }}>Sectional Sofa</div>
+            <div style={{ fontFamily: 'Caveat', fontSize: 11, color: SOFT, marginBottom: 4 }}>Scanned May 27, 2026 · 9:41am</div>
+            <Chip color="green">89% Confidence</Chip>
+          </div>
+        </div>
+
+        {/* Rows */}
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          {rows.map(([label, value, green], i) => (
+            <div key={label} style={{ padding: '9px 12px', borderBottom: `1px solid #f0f0f0`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontFamily: 'Caveat', fontSize: 13, color: MID }}>{label}</div>
+              <div style={{ fontFamily: 'Caveat', fontSize: 15, fontWeight: 700, color: green ? GREEN : DARK }}>{value}</div>
+            </div>
+          ))}
+
+          {/* Handling note */}
+          <div style={{ margin: '8px 12px', border: `2px solid #f0d060`, borderRadius: 8, padding: '7px 10px', background: '#fffdf0' }}>
+            <div style={{ fontFamily: 'Caveat', fontSize: 13, fontWeight: 700, color: DARK, marginBottom: 2 }}>Handling Notes</div>
+            <div style={{ fontFamily: 'Caveat', fontSize: 12, color: MID }}>Protect from moisture. Disassemble for doorways under 36". Wrap cushions separately.</div>
+          </div>
+        </div>
+
+        {/* CTAs */}
+        <div style={{ padding: '8px 12px', borderTop: `2px solid #eee`, display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+          <Btn primary full>Post Shipment</Btn>
+          <Btn full>Save to Inventory</Btn>
+        </div>
+      </div>
+    </Phone>
+  );
+}
+
+// ─── WIREFRAME G: Room Multi-Scan ─────────────────────────────────────────
+function WireG() {
+  const items = [
+    { n: 1, name: 'Sectional Sofa', wt: '~185 lbs', color: BLUE },
+    { n: 2, name: 'Coffee Table',   wt: '~45 lbs',  color: '#c97200' },
+    { n: 3, name: 'Armchair',       wt: '~65 lbs',  color: GREEN },
+  ];
+
+  return (
+    <Phone height={580}>
+      <div style={{ position: 'absolute', inset: 0, background: '#111' }}>
+        <div style={{ position: 'absolute', inset: 0, background: CAM_BG }} />
+
+        {/* Top bar */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '7px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.65)', zIndex: 2 }}>
+          <div style={{ fontFamily: 'Caveat', fontSize: 15, color: '#fff', fontWeight: 700 }}>Room Scan</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.12)', border: `1.5px solid #555`, borderRadius: 6, padding: '3px 8px', fontFamily: 'Caveat', fontSize: 11, color: '#fff' }}>3 detected</div>
+            <div style={{ background: BLUE, borderRadius: 6, padding: '3px 8px', fontFamily: 'Caveat', fontSize: 11, color: '#fff', fontWeight: 700 }}>Done</div>
+          </div>
+        </div>
+
+        {/* Bounding boxes */}
+        {/* Sofa */}
+        <div style={{ position: 'absolute', top: 56, left: 16, width: 115, height: 95, border: `2px solid ${BLUE}`, borderRadius: 4 }}>
+          <div style={{ position: 'absolute', top: -11, left: 5, width: 18, height: 18, background: BLUE, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontFamily: 'Caveat', fontSize: 11, color: '#fff', fontWeight: 700 }}>1</span>
+          </div>
+        </div>
+        {/* Coffee table */}
+        <div style={{ position: 'absolute', top: 118, left: 142, width: 75, height: 55, border: `2px solid #c97200`, borderRadius: 4 }}>
+          <div style={{ position: 'absolute', top: -11, left: 5, width: 18, height: 18, background: '#c97200', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontFamily: 'Caveat', fontSize: 11, color: '#fff', fontWeight: 700 }}>2</span>
+          </div>
+        </div>
+        {/* Armchair */}
+        <div style={{ position: 'absolute', top: 62, right: 20, width: 52, height: 62, border: `2px solid ${GREEN}`, borderRadius: 4 }}>
+          <div style={{ position: 'absolute', top: -11, left: 5, width: 18, height: 18, background: GREEN, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontFamily: 'Caveat', fontSize: 11, color: '#fff', fontWeight: 700 }}>3</span>
+          </div>
+        </div>
+
+        {/* Scanning banner */}
+        <div style={{ position: 'absolute', top: '46%', left: '50%', transform: 'translate(-50%,-50%)', background: 'rgba(0,0,0,0.72)', border: `1.5px solid ${BLUE}`, borderRadius: 8, padding: '6px 14px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+          <span style={{ fontFamily: 'Caveat', fontSize: 13, color: '#fff' }}>Move slowly for better accuracy</span>
+        </div>
+
+        {/* Bottom list */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.92)', borderTop: `2px solid #333`, padding: '8px 10px 10px' }}>
+          {items.map(item => (
+            <div key={item.n} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+              <div style={{ width: 18, height: 18, background: item.color, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontFamily: 'Caveat', fontSize: 11, color: '#fff', fontWeight: 700 }}>{item.n}</span>
+              </div>
+              <div style={{ flex: 1, fontFamily: 'Caveat', fontSize: 13, color: '#fff' }}>{item.name}</div>
+              <div style={{ fontFamily: 'Caveat', fontSize: 12, color: '#aaa' }}>{item.wt}</div>
+              <div style={{ fontFamily: 'Caveat', fontSize: 14, color: item.color }}>›</div>
+            </div>
+          ))}
+          <Btn primary full style={{ marginTop: 6 }}>Post All Items</Btn>
+        </div>
+      </div>
+    </Phone>
+  );
+}
+
+// ─── WIREFRAME H: Post-Scan Next Steps ────────────────────────────────────
+function WireH() {
+  const actions = [
+    { icon: '→', label: 'Post a Shipment',    sub: 'Get quotes from feedback-rated carriers', primary: true  },
+    { icon: '↓', label: 'Save to Inventory',  sub: 'Add to your items list for later',        primary: false },
+    { icon: '↗', label: 'Share Estimate',     sub: 'Send specs via link or message',          primary: false },
+  ];
+  const saved = [
+    { name: 'Dining Table', dims: '60"×30"×30"', wt: '~120 lbs' },
+    { name: 'Bookcase',     dims: '36"×72"×12"', wt: '~85 lbs'  },
+  ];
+
+  return (
+    <Phone height={580}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: BGPAGE }}>
+        {/* Summary strip */}
+        <div style={{ padding: '10px 12px', background: '#fff', borderBottom: `2px solid #eee`, flexShrink: 0 }}>
+          <div style={{ fontFamily: 'Caveat', fontSize: 18, fontWeight: 700, color: DARK, marginBottom: 2 }}>What's Next?</div>
+          <div style={{ fontFamily: 'Caveat', fontSize: 12, color: MID }}>Sectional Sofa · 84"×34"×36" · ~185 lbs</div>
+        </div>
+
+        <div style={{ flex: 1, padding: '10px 12px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {/* Action cards */}
+          {actions.map((a, i) => (
+            <div key={i} style={{ border: `2px solid ${a.primary ? BLUE : DARK}`, borderRadius: 10, padding: '10px 12px', background: a.primary ? BLUELT : '#fff', display: 'flex', gap: 10, alignItems: 'center' }}>
+              <div style={{ width: 28, height: 28, borderRadius: 6, background: a.primary ? BLUE : '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontFamily: 'Caveat', fontSize: 14, color: a.primary ? '#fff' : DARK, fontWeight: 700 }}>{a.icon}</span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: 'Caveat', fontSize: 15, fontWeight: 700, color: a.primary ? BLUE : DARK }}>{a.label}</div>
+                <div style={{ fontFamily: 'Caveat', fontSize: 11, color: SOFT }}>{a.sub}</div>
+              </div>
+              <div style={{ fontFamily: 'Caveat', fontSize: 18, color: a.primary ? BLUE : '#ccc' }}>›</div>
+            </div>
+          ))}
+
+          {/* Saved items */}
+          <div style={{ borderTop: `2px solid #e0e0e0`, paddingTop: 8 }}>
+            <div style={{ fontFamily: 'Caveat', fontSize: 13, fontWeight: 700, color: DARK, marginBottom: 6 }}>My Saved Items (2)</div>
+            {saved.map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: `1px solid #f0f0f0` }}>
+                <Hatch style={{ width: 32, height: 32, borderRadius: 4, border: `1.5px solid #ddd`, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'Caveat', fontSize: 13, fontWeight: 700, color: DARK }}>{item.name}</div>
+                  <div style={{ fontFamily: 'Caveat', fontSize: 11, color: SOFT }}>{item.dims} · {item.wt}</div>
+                </div>
+                <div style={{ fontFamily: 'Caveat', fontSize: 12, color: BLUE, fontWeight: 700, cursor: 'pointer' }}>Post</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Scan another */}
+        <div style={{ padding: '8px 12px', borderTop: `2px solid #eee`, background: '#fff', flexShrink: 0 }}>
+          <Btn full>Scan Another Item</Btn>
+        </div>
+      </div>
+    </Phone>
+  );
+}
+
+// ─── APP ───────────────────────────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas title="Furniture Scanner — Wireframe Explorations">
+      <DCSection id="capture" title="01 · Capture UI — 3 approaches">
+        <DCArtboard id="ar" label="A · AR Live Overlay" width={290} height={600}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 12, background: '#f0eee9' }}>
+            <WireA />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="guided" label="B · Guided Step-by-Step" width={290} height={600}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 12, background: '#f0eee9' }}>
+            <WireB />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="upload" label="C · Web Upload" width={420} height={600}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 12, background: '#f0eee9' }}>
+            <WireC />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="results" title="02 · Results UI — 3 layouts">
+        <DCArtboard id="card" label="D · Instant Card" width={290} height={620}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 12, background: '#f0eee9' }}>
+            <WireD />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="callouts" label="E · Photo + Dimension Callouts" width={290} height={620}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 12, background: '#f0eee9' }}>
+            <WireE />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="specs" label="F · Detailed Specs List" width={290} height={620}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 12, background: '#f0eee9' }}>
+            <WireF />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="flows" title="03 · Multi-Item &amp; Next Steps">
+        <DCArtboard id="room" label="G · Room Scan Mode" width={290} height={620}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 12, background: '#f0eee9' }}>
+            <WireG />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="nextsteps" label="H · Post-Scan Next Steps" width={290} height={620}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 12, background: '#f0eee9' }}>
+            <WireH />
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

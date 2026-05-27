@@ -1,0 +1,523 @@
+/* ============================================================
+   Skid · uShip Design System — TOKENS
+   Auto-generated from Figma Variables (primitive + semantic + component).
+   Do not edit by hand; regenerate from uploads/*.json.
+   ============================================================ */
+
+:root {
+  /* ---------- NEUTRAL GRAY ---------- */
+  --gray-0: rgb(255,255,255);
+  --gray-50: rgb(249,250,251);
+  --gray-100: rgb(244,246,248);
+  --gray-150: rgb(239,241,243);
+  --gray-200: rgb(229,231,235);
+  --gray-300: rgb(205,210,215);
+  --gray-400: rgb(156,163,175);
+  --gray-500: rgb(107,114,128);
+  --gray-600: rgb(75,85,99);
+  --gray-700: rgb(55,65,81);
+  --gray-750: rgb(43,48,56);
+  --gray-800: rgb(30,30,30);
+  --gray-900: rgb(15,15,15);
+  --gray-950: rgb(10,10,10);
+  --black-70: rgba(0,0,0,0.7);
+
+  /* ---------- RED ---------- */
+  --red-50: rgb(252,232,232);
+  --red-100: rgb(241,230,230);
+  --red-200: rgb(248,208,208);
+  --red-300: rgb(242,163,163);
+  --red-400: rgb(227,104,104);
+  --red-500: rgb(220,75,75);
+  --red-600: rgb(219,57,57);
+  --red-700: rgb(198,59,59);
+  --red-800: rgb(161,47,47);
+  --red-900: rgb(129,31,31);
+
+  /* ---------- GREEN ---------- */
+  --green-50: rgb(232,242,232);
+  --green-100: rgb(200,230,200);
+  --green-200: rgb(160,212,160);
+  --green-300: rgb(111,191,138);
+  --green-400: rgb(77,173,130);
+  --green-500: rgb(51,161,122);
+  --green-600: rgb(0,144,44);
+  --green-700: rgb(0,108,33);
+  --green-800: rgb(0,72,22);
+  --green-900: rgb(0,51,34);
+
+  /* ---------- BLUE ---------- */
+  /* Brand identity color — used for the uShip logo per the 2026 Brand
+     Guidelines. Distinct from the interactive UI tones below
+     (Blue-600/700) which the Figma design tokens use for buttons,
+     focus rings, links, etc. */
+  --brand-blue: rgb(0,115,173); /* #0073AD — logo only */
+
+  --blue-50: rgb(229,238,245);
+  --blue-100: rgb(214,234,244);
+  --blue-200: rgb(183,219,238);
+  --blue-300: rgb(143,203,230);
+  --blue-400: rgb(90,191,224);
+  --blue-500: rgb(53,168,214);
+  --blue-600: rgb(2,124,177);
+  --blue-700: rgb(1,102,146);
+  --blue-800: rgb(0,79,112);
+  --blue-900: rgb(0,31,51);
+
+  /* ---------- ORANGE ---------- */
+  --orange-50: rgb(253,244,232);
+  --orange-100: rgb(250,228,196);
+  --orange-200: rgb(245,206,147);
+  --orange-300: rgb(237,180,98);
+  --orange-400: rgb(228,154,53);
+  --orange-500: rgb(219,133,18);
+  --orange-600: rgb(211,114,3);
+  --orange-700: rgb(168,90,2);
+  --orange-800: rgb(110,59,1);
+  --orange-900: rgb(51,30,0);
+
+  /* ---------- PURPLE ---------- */
+  --purple-50: rgb(240,236,244);
+  --purple-100: rgb(222,212,232);
+  --purple-200: rgb(200,180,216);
+  --purple-300: rgb(178,147,203);
+  --purple-400: rgb(155,114,189);
+  --purple-500: rgb(132,89,168);
+  --purple-600: rgb(109,64,146);
+  --purple-700: rgb(87,47,120);
+  --purple-800: rgb(72,35,108);
+  --purple-900: rgb(58,24,96);
+
+  /* ---------- SKY ---------- */
+  --sky-50: rgb(232,247,252);
+  --sky-100: rgb(200,237,249);
+  --sky-200: rgb(164,226,247);
+  --sky-300: rgb(176,240,255);
+  --sky-400: rgb(173,237,255);
+  --sky-500: rgb(138,219,249);
+  --sky-600: rgb(103,201,243);
+  --sky-700: rgb(61,166,212);
+  --sky-800: rgb(31,126,168);
+  --sky-900: rgb(13,79,110);
+
+  /* ---------- LIME ---------- */
+  --lime-50: rgb(240,253,228);
+  --lime-100: rgb(218,251,191);
+  --lime-200: rgb(196,249,152);
+  --lime-300: rgb(184,250,130);
+  --lime-400: rgb(172,249,108);
+  --lime-500: rgb(120,233,119);
+  --lime-600: rgb(76,217,130);
+  --lime-700: rgb(48,180,102);
+  --lime-800: rgb(28,138,74);
+  --lime-900: rgb(14,92,48);
+
+  /* ---------- MAGENTA ---------- */
+  --magenta-50: rgb(253,232,240);
+  --magenta-100: rgb(252,200,216);
+  --magenta-200: rgb(250,158,186);
+  --magenta-300: rgb(248,111,155);
+  --magenta-400: rgb(255,64,129);
+  --magenta-500: rgb(215,32,113);
+  --magenta-600: rgb(175,0,97);
+  --magenta-700: rgb(140,0,78);
+  --magenta-800: rgb(102,0,58);
+  --magenta-900: rgb(64,0,37);
+
+  /* ---------- BRAND ---------- */
+  --brand-navy-900: rgb(0,131,187);   /* uShip primary brand */
+  --brand-uship: rgb(0,131,187);
+  --brand-navy-900-35: rgba(0,131,187,0.35);
+  --blue-400-35: rgba(90,191,224,0.35);
+
+  /* ---------- SPACING (4px base) ---------- */
+  --space-0: 0px;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-9: 36px;
+  --space-10: 40px;
+  --space-11: 44px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --space-40: 160px;
+
+  /* ---------- RADII ---------- */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-lg: 8px;
+  --radius-full: 100px;
+  --radius-xl: 12px;
+  --radius-xx-large: 14px;
+  --radius-none: 0px;
+  --radius-md: 6px;
+
+  /* ---------- BORDER WIDTH ---------- */
+  --border-width-thin: 1px;
+  --border-width-medium: 2px;
+  --border-width-thick: 3px;
+
+  /* ---------- ICON SIZES ---------- */
+  --icon-xs: 12px;
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --icon-xl: 32px;
+  --icon-2xl: 40px;
+
+  /* ---------- BREAKPOINTS ---------- */
+  --bp-xs: 360px;
+  --bp-sm: 451px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1441px;
+  --bp-2xl: 1536px;
+
+  /* ---------- CONTROL SIZE ---------- */
+  --control-size-default: 20px;
+  --control-size-compact: 16px;
+  --control-size: 20px;
+
+  /* ---------- SEMANTIC TOKENS (light mode) ---------- */
+  --action-destructive-bg-subtle: var(--red-50);
+  --action-destructive: var(--red-700);
+  --action-destructive-hover: var(--red-800);
+  --action-destructive-pressed: var(--red-900);
+  --action-primary-bg-subtle: var(--green-50);
+  --action-primary: var(--green-700);
+  --action-primary-hover: var(--green-800);
+  --action-primary-pressed: var(--green-900);
+  --action-secondary-bg-subtle: var(--blue-50);
+  --action-secondary: var(--blue-600);
+  --action-secondary-hover: var(--blue-700);
+  --action-secondary-pressed: var(--blue-800);
+  --action-tertiary-bg-subtle: var(--blue-50);
+  --action-tertiary: var(--blue-600);
+  --action-tertiary-hover: var(--blue-700);
+  --action-tertiary-pressed: var(--blue-800); /* matches --action-secondary-pressed — darker pressed fill */
+  --badge-expressive-bg-outline: var(--purple-50);
+  --badge-expressive-bg-solid: var(--purple-600);
+  --badge-expressive-border: var(--purple-600);
+  --badge-negative-bg-outline: var(--red-50);
+  --badge-negative-bg-solid: var(--red-700);
+  --badge-negative-border: var(--red-700);
+  --badge-positive-bg-outline: var(--green-50);
+  --badge-positive-bg-solid: var(--green-700);
+  --badge-positive-border: var(--green-700);
+  --badge-standard-bg-outline: var(--status-info-bg);
+  --badge-standard-bg-solid: var(--blue-600);
+  --badge-standard-border: var(--blue-600);
+  --badge-warning-bg-outline: var(--orange-50);
+  --badge-warning-bg-solid: var(--orange-700);
+  --badge-warning-border: var(--orange-700);
+  --bg-button-disabled: var(--gray-150);
+  --bg-ghost-hover: var(--gray-200);
+  --bg-ghost-pressed: var(--gray-300);
+  --border-button-destructive: var(--red-800);
+  --border-button-tertiary: var(--blue-700);
+  --border-disabled: var(--gray-200);
+  --border-error: var(--red-800);
+  --border-focus-ring: var(--blue-400);
+  --border-hover: var(--gray-500);
+  --border-interactive: var(--gray-300);
+  --border-soft: var(--gray-200);
+  --border-strong: var(--gray-400);
+  --brand-uShip: var(--brand-navy-900);
+  --control-border-default: var(--gray-300);
+  --control-calendar-range: var(--blue-200);
+  --control-calendar-select: var(--blue-600);
+  --control-fill-active: var(--blue-600);
+  --control-slider-track-active-disabled: var(--gray-500);
+  --control-switch-track-active-disabled: var(--blue-200);
+  --control-thumb-default: var(--gray-0);
+  --control-thumb-disabled: var(--gray-150);
+  --control-track-active: var(--blue-600);
+  --control-track-disabled: var(--gray-200);
+  --control-track-inactive: var(--gray-300);
+  --icon-button: var(--gray-0);
+  --icon-button-destructive: var(--red-800);
+  --icon-button-destructive-hover: var(--red-800);
+  --icon-button-destructive-pressed: var(--red-800);
+  --icon-button-disabled: var(--gray-400);
+  --icon-button-ghost: var(--blue-700);
+  --icon-button-ghost-hover: var(--blue-800);
+  --icon-button-ghost-pressed: var(--blue-800);
+  --icon-button-tertiary: var(--blue-700);
+  --icon-button-tertiary-hover: var(--blue-800);
+  --icon-button-tertiary-pressed: var(--blue-800);
+  --icon: var(--gray-600);
+  --icon-disabled-on-card: var(--gray-400);
+  --icon-error: var(--red-800);
+  --icon-hover: var(--gray-200);
+  --icon-info: var(--blue-600);
+  --icon-loading: var(--brand-uShip);
+  --icon-success: var(--green-700);
+  --icon-tab-contained: var(--blue-800);
+  --link-surface-01: var(--blue-700);
+  --link-surface-01-disabled: var(--gray-500);
+  --link-surface-01-hover: var(--blue-800);
+  --link-surface-01-pressed: var(--blue-900);
+  --link-surface-card: var(--blue-700);
+  --link-surface-card-disabled: var(--gray-500);
+  --link-surface-card-hover: var(--blue-800);
+  --link-surface-card-pressed: var(--blue-900);
+  --status-error-bg: var(--red-50);
+  --status-error-border: var(--red-800);
+  --status-error-text: var(--red-800);
+  --status-info-bg: var(--blue-50);
+  --status-info-border: var(--blue-600);
+  --status-info-text: var(--blue-600);
+  --status-success-bg: var(--green-50);
+  --status-success-border: var(--green-700);
+  --status-success-text: var(--green-700);
+  --status-warning-bg: var(--orange-50);
+  --status-warning-border: var(--orange-700);
+  --status-warning-text: var(--orange-700);
+  --surface-card: var(--gray-0);
+  --surface-inverse: var(--gray-300);
+  --surface-layer-01: var(--gray-50);
+  --surface-layer-01-active: var(--gray-300);
+  --surface-layer-01-disabled: var(--gray-150);
+  --surface-layer-01-hover: var(--gray-200);
+  --surface-layer-02: var(--gray-100);
+  --surface-layer-03: var(--gray-200);
+  --surface-scrim: var(--black-70);
+  --surface-shell: var(--gray-0);
+  --surface-skeleton-highlight: var(--gray-200);
+  --surface-skeleton-track: var(--gray-300);
+  --surface-thumb: var(--gray-50);
+  --tabs-contained-bg-disabled: var(--gray-150);
+  --tabs-contained-bg-hover: var(--blue-200);
+  --tabs-contained-bg-select: var(--blue-50);
+  --tabs-contained-border-active: var(--blue-600);
+  --tabs-contained-border: var(--gray-300);
+  --tabs-contained-border-hover: var(--blue-700);
+  --tabs-underline-active: var(--blue-600);
+  --tabs-underline: var(--gray-300);
+  --tabs-underline-disabled: var(--gray-200);
+  --tabs-underline-hover: var(--blue-700);
+  --text-button: var(--gray-0);
+  --text-button-destructive: var(--red-800);
+  --text-button-ghost: var(--blue-700);
+  --text-button-ghost-hover: var(--blue-800);
+  --text-button-ghost-pressed: var(--blue-800);
+  --text-button-tertiary: var(--blue-700);
+  --text-disabled: var(--gray-400);
+  --text-disabled-on-card: var(--gray-400);
+  --text-error: var(--red-800);
+  --text-helper: var(--gray-600);
+  --text-inverse: var(--gray-0);
+  --text-label: var(--gray-700);
+  --text-loading: var(--brand-uShip);
+  --text-placeholder: var(--gray-500);
+  --text-primary: var(--gray-700);
+  --text-secondary: var(--gray-600);
+  --text-tab-contained: var(--blue-800);
+  --text-tertiary: var(--gray-400);
+  --shadow-focus-glow: var(--blue-400-35);
+
+  /* ---------- TYPE (semantic vars; classes are in colors_and_type.css) ---------- */
+  --font-sans: "Lato", -apple-system, "Segoe UI", system-ui, sans-serif;
+  /* Skid does not use monospace. --font-mono is kept as a Lato alias only
+     so legacy references don't fall through to a system mono. Use Lato +
+     tabular-nums for numerics (see .skid-num-* in colors_and_type.css). */
+  --font-mono: var(--font-sans);
+
+  /* Headers (Lato Bold) */
+  --h1-size: 32px; --h1-line: 38px; --h1-weight: 700;
+  --h2-size: 24px; --h2-line: 31px; --h2-weight: 700;
+  --h3-size: 20px; --h3-line: 24px; --h3-weight: 700;
+  --h4-size: 18px; --h4-line: 24px; --h4-weight: 700;
+  --h5-size: 16px; --h5-line: 20px; --h5-weight: 700;
+
+  /* Body */
+  --body-md-size: 16px; --body-md-line: 22px; --body-md-weight: 400;
+  --body-sm-size: 14px; --body-sm-line: 19px; --body-sm-weight: 400;
+  --body-label-size: 12px; --body-label-line: 16px; --body-label-weight: 700;
+
+  /* Helper */
+  --helper-size: 12px; --helper-line: 16px;
+
+  /* Button */
+  --button-size: 16px; --button-line: 24px; --button-weight: 700;
+
+  /* Badge */
+  --badge-sm-size: 10px; --badge-sm-line: 18px; --badge-sm-track: 0.35px;
+  --badge-lg-size: 14px; --badge-lg-line: 19px; --badge-lg-track: 0.35px;
+
+  /* Number — Lato Bold */
+  --num-xs-size: 11px; --num-xs-line: 14px; --num-xs-track: 0px;   --num-xs-weight: 400;
+  --num-sm-size: 24px; --num-sm-line: 30px; --num-sm-track: 0.5px; --num-sm-weight: 700;
+  --num-md-size: 32px; --num-md-line: 40px; --num-md-track: 0.6px; --num-md-weight: 700;
+  --num-lg-size: 40px; --num-lg-line: 50px; --num-lg-track: 0.7px; --num-lg-weight: 700;
+
+  /* Link */
+  --link-sm-size: 14px; --link-sm-line: 19px; --link-sm-weight: 400;
+  --link-md-size: 16px; --link-md-line: 22px; --link-md-weight: 400;
+  --link-lg-size: 18px; --link-lg-line: 24px; --link-lg-weight: 700;
+
+  /* Data / table */
+  --data-th-size: 14px; --data-th-line: 20px; --data-th-weight: 700;
+  --data-td-size: 12px; --data-td-line: 16px; --data-td-track: 0.5px; --data-td-weight: 400;
+
+  /* ---------- ELEVATION ---------- */
+  --elev-1: 0 1px 2px rgba(15,15,15,0.06), 0 1px 1px rgba(0,0,0,0.04);
+  --elev-2: 0 2px 4px rgba(15,15,15,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --elev-3: 0 4px 12px rgba(15,15,15,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --elev-4: 0 8px 24px rgba(15,15,15,0.10), 0 4px 8px rgba(0,0,0,0.04);
+  --elev-overlay: 0 16px 40px rgba(0,31,51,0.18), 0 4px 12px rgba(0,0,0,0.06);
+  --focus-ring: 0 0 0 2px var(--gray-0), 0 0 0 4px var(--shadow-focus-glow);
+}
+
+/* ============================================================
+   DARK MODE — semantic overrides only
+   Activate by adding data-theme="dark" to <html> or <body>,
+   or by user preference via the media query block below.
+   ============================================================ */
+
+[data-theme="dark"] {
+  --action-destructive-bg-subtle: var(--red-900);
+  --action-destructive: var(--red-400);
+  --action-destructive-hover: var(--red-300);
+  --action-destructive-pressed: var(--red-500);
+  --action-primary-bg-subtle: var(--green-900);
+  --action-primary: var(--green-500);
+  --action-primary-hover: var(--green-400);
+  --action-primary-pressed: var(--green-600);
+  --action-secondary-bg-subtle: var(--blue-900);
+  --action-secondary: var(--blue-500);
+  --action-secondary-hover: var(--blue-400);
+  --action-secondary-pressed: var(--blue-600);
+  --action-tertiary-bg-subtle: var(--blue-900);
+  --action-tertiary: var(--blue-500);
+  --action-tertiary-hover: var(--blue-400);
+  --action-tertiary-pressed: var(--blue-600);
+  --badge-expressive-bg-outline: var(--purple-900);
+  --badge-expressive-bg-solid: var(--purple-400);
+  --badge-expressive-border: var(--purple-400);
+  --badge-negative-bg-outline: var(--red-900);
+  --badge-negative-bg-solid: var(--red-400);
+  --badge-negative-border: var(--red-400);
+  --badge-positive-bg-outline: var(--green-900);
+  --badge-positive-bg-solid: var(--green-500);
+  --badge-positive-border: var(--green-500);
+  --badge-standard-bg-outline: var(--blue-900);
+  --badge-standard-bg-solid: var(--blue-500);
+  --badge-standard-border: var(--blue-500);
+  --badge-warning-bg-outline: var(--orange-900);
+  --badge-warning-bg-solid: var(--orange-400);
+  --badge-warning-border: var(--orange-400);
+  --bg-button-disabled: var(--gray-800);
+  --bg-ghost-hover: var(--gray-700);
+  --bg-ghost-pressed: var(--gray-900);
+  --border-button-destructive: var(--red-400);
+  --border-button-tertiary: var(--blue-600);
+  --border-disabled: var(--gray-700);
+  --border-error: var(--red-600);
+  --border-focus-ring: var(--brand-navy-900);
+  --border-hover: var(--gray-400);
+  --border-interactive: var(--gray-500);
+  --border-soft: var(--gray-700);
+  --border-strong: var(--gray-400);
+  --brand-uShip: var(--brand-navy-900);
+  --control-border-default: var(--gray-500);
+  --control-calendar-range: var(--gray-0);
+  --control-calendar-select: var(--gray-0);
+  --control-fill-active: var(--blue-500);
+  --control-slider-track-active-disabled: var(--control-track-disabled);
+  --control-switch-track-active-disabled: var(--blue-700);
+  --control-thumb-default: var(--gray-0);
+  --control-thumb-disabled: var(--gray-600);
+  --control-track-active: var(--blue-500);
+  --control-track-disabled: var(--gray-700);
+  --control-track-inactive: var(--gray-500);
+  --icon-button: var(--gray-950);
+  --icon-button-destructive: var(--red-400);
+  --icon-button-destructive-hover: var(--red-400);
+  --icon-button-destructive-pressed: var(--red-200);
+  --icon-button-disabled: var(--gray-500);
+  --icon-button-ghost: var(--blue-500);
+  --icon-button-ghost-hover: var(--blue-400);
+  --icon-button-ghost-pressed: var(--blue-500);
+  --icon-button-tertiary: var(--blue-500);
+  --icon-button-tertiary-hover: var(--blue-400);
+  --icon-button-tertiary-pressed: var(--blue-300);
+  --icon: var(--gray-200);
+  --icon-disabled-on-card: var(--gray-500);
+  --icon-error: var(--red-400);
+  --icon-hover: var(--gray-400);
+  --icon-info: var(--blue-300);
+  --icon-loading: var(--brand-uShip);
+  --icon-success: var(--green-500);
+  --icon-tab-contained: var(--blue-200);
+  --link-surface-01: var(--blue-400);
+  --link-surface-01-disabled: var(--gray-600);
+  --link-surface-01-hover: var(--blue-300);
+  --link-surface-01-pressed: var(--blue-500);
+  --link-surface-card: var(--blue-500);
+  --link-surface-card-disabled: var(--gray-600);
+  --link-surface-card-hover: var(--blue-600);
+  --link-surface-card-pressed: var(--blue-700);
+  --status-error-bg: var(--red-900);
+  --status-error-border: var(--red-600);
+  --status-error-text: var(--red-400);
+  --status-info-bg: var(--blue-900);
+  --status-info-border: var(--blue-300);
+  --status-info-text: var(--blue-300);
+  --status-success-bg: var(--green-900);
+  --status-success-border: var(--green-400);
+  --status-success-text: var(--green-400);
+  --status-warning-bg: var(--orange-900);
+  --status-warning-border: var(--orange-400);
+  --status-warning-text: var(--orange-400);
+  --surface-card: var(--gray-800);
+  --surface-inverse: var(--gray-0);
+  --surface-layer-01: var(--gray-800);
+  --surface-layer-01-active: var(--gray-600);
+  --surface-layer-01-disabled: var(--gray-800);
+  --surface-layer-01-hover: var(--gray-700);
+  --surface-layer-02: var(--gray-750);
+  --surface-layer-03: var(--gray-700);
+  --surface-scrim: var(--black-70);
+  --surface-shell: var(--gray-950);
+  --surface-skeleton-highlight: var(--gray-600);
+  --surface-skeleton-track: var(--gray-500);
+  --surface-thumb: var(--gray-200);
+  --tabs-contained-bg-disabled: var(--gray-800);
+  --tabs-contained-bg-hover: var(--blue-800);
+  --tabs-contained-bg-select: var(--blue-800);
+  --tabs-contained-border-active: var(--blue-500);
+  --tabs-contained-border: var(--gray-600);
+  --tabs-contained-border-hover: var(--blue-400);
+  --tabs-underline-active: var(--blue-500);
+  --tabs-underline: var(--gray-600);
+  --tabs-underline-disabled: var(--gray-700);
+  --tabs-underline-hover: var(--blue-400);
+  --text-button: var(--gray-950);
+  --text-button-destructive: var(--red-400);
+  --text-button-ghost: var(--blue-500);
+  --text-button-ghost-hover: var(--blue-400);
+  --text-button-ghost-pressed: var(--blue-500);
+  --text-button-tertiary: var(--blue-500);
+  --text-disabled: var(--gray-500);
+  --text-disabled-on-card: var(--gray-500);
+  --text-error: var(--red-600);
+  --text-helper: var(--gray-200);
+  --text-inverse: var(--gray-950);
+  --text-label: var(--gray-0);
+  --text-loading: var(--brand-uShip);
+  --text-placeholder: var(--gray-200);
+  --text-primary: var(--gray-0);
+  --text-secondary: var(--gray-200);
+  --text-tab-contained: var(--blue-200);
+  --text-tertiary: var(--gray-300);
+  --shadow-focus-glow: var(--brand-navy-900-35);
+}
