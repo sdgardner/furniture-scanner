@@ -35,6 +35,9 @@ app.post('/analyze', async (req, res) => {
 
 Analyze this image carefully using every visual clue available:
 - If a coin is visible, use it as a scale reference (a US quarter is 0.955" diameter)
+- If a banana is visible, use it as a scale reference (a typical banana is 7-8" long)
+- If a standard water bottle is visible, use it as a scale reference (typically 10-11" tall)
+- If a hand or foot is visible, use it as a scale reference (average hand span ~7-8", foot ~10")
 - Use standard room features for scale: doorways are typically 80" tall and 32-36" wide, ceiling heights are typically 96-108", electrical outlets are 4.5" tall, light switches are 4.5" tall
 - Use the furniture's own proportions — drawer heights, cushion depths, leg heights all have standard sizes
 - Look at flooring tiles/planks, baseboards, and wall features for additional scale
