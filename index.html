@@ -164,7 +164,18 @@ function ScreenHome({ go, scans }) {
       <div style={{background:'var(--gray-0)',borderBottom:'1px solid var(--gray-200)',padding:'28px 20px 24px'}}>
         <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}}>Item Scanner</div>
         <h1 style={{fontSize:26,fontWeight:700,color:'var(--gray-800)',lineHeight:1.25,marginBottom:8}}>Scan Your Furniture</h1>
-        <p style={{fontSize:15,color:'var(--gray-600)',lineHeight:1.55,marginBottom:22}}>Get instant weight and dimension estimates — before you ship.</p>
+        <p style={{fontSize:15,color:'var(--gray-600)',lineHeight:1.55,marginBottom:16}}>Get instant weight and dimension estimates — before you ship.</p>
+        <div style={{background:'var(--blue-50)',border:'1px solid var(--blue-200)',borderRadius:8,padding:'12px 14px',marginBottom:18}}>
+          <div style={{fontSize:12,fontWeight:700,color:'var(--blue-800)',marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
+            📏 Better accuracy tip
+          </div>
+          <p style={{fontSize:13,color:'var(--blue-900)',lineHeight:1.55,margin:0}}>
+            Place an everyday object next to the item before scanning — a soda can, a standard hardcover book, or a water bottle all work great as size references. We'll use it to nail the measurements.
+          </p>
+          <p style={{fontSize:12,color:'var(--blue-700)',marginTop:6,marginBottom:0,fontStyle:'italic'}}>
+            🍌 A banana also works. We don't judge.
+          </p>
+        </div>
         <div style={{display:'flex',flexDirection:'column',gap:10}}>
           <button className="skid-btn skid-btn--primary skid-btn--lg" style={{width:'100%',gap:10}} onClick={()=>go(1)}>
             <IcoCamera />Start Scanning
