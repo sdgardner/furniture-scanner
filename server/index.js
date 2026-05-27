@@ -4,19 +4,32 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.post('/analyze', async (req, res) => {
-  const { image } = req.body; // base64 image data URL
-  if (!image) return res.status(400).json({ error: 'No image provided' });
+  const { images, image, material, materialDensity } = req.body;
 
-  // Strip the data URL prefix to get raw base64
-  const base64 = image.replace(/^data:image\/\w+;base64,/, '');
-  const mediaType = image.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/jpeg';
+  // Accept either multi-photo `images` array or legacy single `image`
+  const photoList = images?.length ? images : image ? [image] : [];
+  if (!photoList.length) return res.status(400).json({ error: 'No image provided' });
+
+  const imageBlocks = photoList.map(dataUrl => {
+    const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const mediaType = dataUrl.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/jpeg';
+    return { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
+  });
+
+  const materialHint = material && material !== 'Unknown'
+    ? `\nThe user identified the material as: ${material}${materialDensity ? ` (density ≈ ${materialDensity} lbs/cu ft — use this for your weight calculation)` : ''}.`
+    : '';
+
+  const photoNote = photoList.length > 1
+    ? `\nYou have ${photoList.length} photos — use them together for better depth/width/height estimates.`
+    : '';
 
   try {
     const response = await client.messages.create({
@@ -25,15 +38,12 @@ app.post('/analyze', async (req, res) => {
       messages: [{
         role: 'user',
         content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mediaType, data: base64 },
-          },
+          ...imageBlocks,
           {
             type: 'text',
-            text: `You are a furniture measurement expert helping shippers get accurate size and weight estimates.
+            text: `You are a furniture measurement expert helping shippers get accurate size and weight estimates.${photoNote}${materialHint}
 
-Analyze this image carefully using every visual clue available:
+Analyze these image(s) carefully using every visual clue available:
 - If a coin is visible, use it as a scale reference (a US quarter is 0.955" diameter)
 - If a banana is visible, use it as a scale reference (a typical banana is 7-8" long)
 - If a standard water bottle is visible, use it as a scale reference (typically 10-11" tall)
@@ -41,7 +51,7 @@ Analyze this image carefully using every visual clue available:
 - Use standard room features for scale: doorways are typically 80" tall and 32-36" wide, ceiling heights are typically 96-108", electrical outlets are 4.5" tall, light switches are 4.5" tall
 - Use the furniture's own proportions — drawer heights, cushion depths, leg heights all have standard sizes
 - Look at flooring tiles/planks, baseboards, and wall features for additional scale
-- Cross-check your estimates: does the weight make sense for the material and size? (solid wood = ~45 lbs/cu ft, upholstered = ~25 lbs/cu ft, metal = ~100 lbs/cu ft)
+- Cross-check your estimates: does the weight make sense for the material and size?${materialDensity ? ` Use ${materialDensity} lbs/cu ft for this item.` : ' (solid wood = ~45 lbs/cu ft, upholstered = ~22 lbs/cu ft, particleboard = ~35 lbs/cu ft, metal = ~90 lbs/cu ft)'}
 
 Respond with ONLY valid JSON, no markdown, no code fences:
 {
@@ -63,7 +73,7 @@ If you cannot identify furniture in the image, return:
     });
 
     const raw = response.content[0].text.trim();
-    const text = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/,'').trim();
+    const text = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/, '').trim();
     const json = JSON.parse(text);
     res.json(json);
   } catch (err) {

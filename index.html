@@ -9,22 +9,13 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body, #root { height: 100%; }
-    body {
-      background: var(--gray-100);
-      font-family: var(--font-sans);
-    }
+    body { background: var(--gray-100); font-family: var(--font-sans); }
 
     .app {
-      max-width: 480px;
-      margin: 0 auto;
-      height: 100%;
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      background: var(--gray-50);
+      max-width: 480px; margin: 0 auto; height: 100%;
+      position: relative; overflow: hidden;
+      display: flex; flex-direction: column; background: var(--gray-50);
     }
-
     .screens { flex: 1; position: relative; overflow: hidden; }
     .screen {
       position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
@@ -36,100 +27,72 @@
     .screen.active  { transform: translateX(0);    opacity: 1; pointer-events: auto; }
     .screen.behind  { transform: translateX(-20%); opacity: 0; pointer-events: none; }
 
-    .app-bar {
-      height: 56px; flex-shrink: 0;
-      display: flex; align-items: center; padding: 0 16px; gap: 8px;
-      background: var(--blue-600);
-    }
-    .back-bar {
-      height: 48px; flex-shrink: 0;
-      display: flex; align-items: center; padding: 0 8px; gap: 4px;
-      background: var(--gray-0); border-bottom: 1px solid var(--gray-200);
-    }
-    .step-bar {
-      flex-shrink: 0; padding: 10px 20px 8px;
-      background: var(--gray-0); border-bottom: 1px solid var(--gray-200);
-    }
+    .app-bar { height: 56px; flex-shrink: 0; display: flex; align-items: center; padding: 0 16px; gap: 8px; background: var(--blue-600); }
+    .back-bar { height: 48px; flex-shrink: 0; display: flex; align-items: center; padding: 0 8px; gap: 4px; background: var(--gray-0); border-bottom: 1px solid var(--gray-200); }
+    .step-bar { flex-shrink: 0; padding: 10px 20px 8px; background: var(--gray-0); border-bottom: 1px solid var(--gray-200); }
 
     /* Camera */
     .cam { flex: 1; position: relative; background: #0a0a0a; overflow: hidden; min-height: 300px; }
     .cam video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    .cam-noise {
-      position: absolute; inset: 0;
-      background: repeating-linear-gradient(45deg,#161616 0,#161616 1px,#0a0a0a 0,#0a0a0a 8px);
-    }
+    .cam-noise { position: absolute; inset: 0; background: repeating-linear-gradient(45deg,#161616 0,#161616 1px,#0a0a0a 0,#0a0a0a 8px); }
     @keyframes scan { 0% { top: 8%; } 100% { top: 88%; } }
-    .scan-line {
-      position: absolute; left: 8%; right: 8%; height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(90,191,224,.8), transparent);
-      border-radius: 1px; animation: scan 2s ease-in-out infinite alternate;
-    }
+    .scan-line { position: absolute; left: 8%; right: 8%; height: 2px; background: linear-gradient(90deg,transparent,rgba(90,191,224,.8),transparent); border-radius: 1px; animation: scan 2s ease-in-out infinite alternate; }
     .corner { position: absolute; width: 26px; height: 26px; }
     .corner--tl { top: 10%; left: 7%;   border-top: 3px solid rgba(90,191,224,.9); border-left: 3px solid rgba(90,191,224,.9); }
     .corner--tr { top: 10%; right: 7%;  border-top: 3px solid rgba(90,191,224,.9); border-right: 3px solid rgba(90,191,224,.9); }
     .corner--bl { bottom: 18%; left: 7%;  border-bottom: 3px solid rgba(90,191,224,.9); border-left: 3px solid rgba(90,191,224,.9); }
     .corner--br { bottom: 18%; right: 7%; border-bottom: 3px solid rgba(90,191,224,.9); border-right: 3px solid rgba(90,191,224,.9); }
-    .cam-footer {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      padding: 16px 32px 32px;
-      display: flex; align-items: center; justify-content: space-between;
-      background: linear-gradient(to top, rgba(0,0,0,.7), transparent);
-    }
-    .cam-ctrl {
-      width: 48px; height: 48px; border-radius: 50%;
-      background: rgba(255,255,255,.12); border: 1.5px solid rgba(255,255,255,.25);
-      display: flex; align-items: center; justify-content: center;
-      color: rgba(255,255,255,.75); cursor: pointer; font-size: 13px; font-weight: 700;
-      font-family: var(--font-sans);
-    }
-    .shutter {
-      width: 76px; height: 76px; border-radius: 50%; cursor: pointer;
-      background: white; box-shadow: 0 0 0 5px rgba(255,255,255,.3);
-      display: flex; align-items: center; justify-content: center;
-      border: none; transition: transform 80ms;
-    }
+    .cam-footer { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 32px 32px; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(to top,rgba(0,0,0,.7),transparent); }
+    .cam-ctrl { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,.12); border: 1.5px solid rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.75); cursor: pointer; font-size: 13px; font-weight: 700; font-family: var(--font-sans); }
+    .shutter { width: 76px; height: 76px; border-radius: 50%; cursor: pointer; background: white; box-shadow: 0 0 0 5px rgba(255,255,255,.3); display: flex; align-items: center; justify-content: center; border: none; transition: transform 80ms; }
     .shutter:active { transform: scale(.94); }
+
+    /* Multi-photo strip */
+    .photo-strip { display: flex; gap: 8px; padding: 10px 12px; background: rgba(0,0,0,.5); overflow-x: auto; }
+    .photo-thumb { width: 52px; height: 52px; border-radius: 6px; object-fit: cover; border: 2px solid rgba(255,255,255,.4); flex-shrink: 0; }
+    .photo-thumb--add { width: 52px; height: 52px; border-radius: 6px; border: 2px dashed rgba(255,255,255,.4); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.6); font-size: 22px; flex-shrink: 0; cursor: pointer; background: rgba(255,255,255,.08); }
 
     /* Processing */
     @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
     @keyframes fadeUp { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:translateY(0); } }
     .shimmer-wrap { position: relative; overflow: hidden; }
-    .shimmer-wrap::after {
-      content:''; position:absolute; inset:0; width:40%;
-      background: linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
-      animation: shimmer 1.5s infinite;
-    }
+    .shimmer-wrap::after { content:''; position:absolute; inset:0; width:40%; background: linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); animation: shimmer 1.5s infinite; }
     .proc-step { animation: fadeUp 280ms ease both; }
 
+    /* Tile selector */
+    .skid-tile { min-height: auto !important; }
+    .material-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .material-tile {
+      padding: 14px 12px; border-radius: 8px; border: 1.5px solid var(--gray-300);
+      background: var(--gray-0); cursor: pointer; transition: border-color 120ms, background 120ms;
+      display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+    }
+    .material-tile:hover { border-color: var(--blue-400); }
+    .material-tile.selected { border-color: var(--blue-600); background: var(--blue-50); }
+    .material-tile__icon { font-size: 28px; }
+    .material-tile__label { font: 700 13px/1 var(--font-sans); color: var(--gray-800); }
+    .material-tile__sub { font: 400 11px/1.3 var(--font-sans); color: var(--gray-500); }
+
+    /* Crew badge */
+    .crew-badge {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--blue-50); border: 1px solid var(--blue-200);
+      border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;
+    }
+    .crew-badge__icons { display: flex; gap: -4px; }
+    .crew-icon { font-size: 22px; }
+
     /* Results */
-    .results-photo {
-      flex-shrink: 0; background: #111; padding: 18px 36px 14px; position: relative;
-    }
+    .results-photo { flex-shrink: 0; background: #111; padding: 18px 36px 14px; position: relative; }
     .results-photo img { width: 100%; border-radius: 8px; display: block; }
-    .results-card {
-      flex: 1; background: var(--gray-50);
-      border-radius: 20px 20px 0 0; margin-top: -16px;
-      padding: 20px 16px 32px; overflow-y: auto;
-    }
-    .dim-chip {
-      border-radius: 5px; padding: 3px 10px;
-      font: 700 13px/1 var(--font-sans); color: white;
-    }
-    .stat-cell {
-      background: var(--gray-0); border: 1px solid var(--gray-300);
-      border-radius: 8px; padding: 10px 8px; text-align: center;
-    }
+    .results-card { flex: 1; background: var(--gray-50); border-radius: 20px 20px 0 0; margin-top: -16px; padding: 20px 16px 32px; overflow-y: auto; }
+    .dim-chip { border-radius: 5px; padding: 3px 10px; font: 700 13px/1 var(--font-sans); color: white; }
+    .stat-cell { background: var(--gray-0); border: 1px solid var(--gray-300); border-radius: 8px; padding: 10px 8px; text-align: center; }
   </style>
 
-  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js"
-    integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L"
-    crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
-    integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm"
-    crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
-    integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y"
-    crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
   <script type="text/babel" src="project/tweaks-panel.jsx"></script>
 </head>
 <body>
@@ -138,13 +101,11 @@
 const { useState, useEffect, useRef } = React;
 
 const API_URL = 'https://furniture-scanner-production.up.railway.app';
-
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{ "units": "in", "showConfidence": true }/*EDITMODE-END*/;
 
 /* ── ICONS ──────────────────────────────────────────────────────────────── */
 const Ico = ({ d, size=24, stroke=1.5, fill="none" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}
-    stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
     {d.map((p,i) => typeof p==='string' && p.startsWith('<circle')
       ? <circle key={i} {...Object.fromEntries(p.match(/(\w+)="([^"]+)"/g).map(a=>a.split('=').map(s=>s.replace(/"/g,''))))} />
       : <path key={i} d={p} />)}
@@ -159,23 +120,26 @@ const IcoSave    = () => <Ico d={['M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5
 const IcoShare   = () => <Ico d={['<circle cx="18" cy="5" r="3"/>','<circle cx="6" cy="12" r="3"/>','<circle cx="18" cy="19" r="3"/>','M8.59 13.51l6.83 3.98','M15.41 6.51L8.59 10.49']} size={20} />;
 const IcoChevron = () => <Ico d={['M9 18l6-6-6-6']} size={18} stroke={2} />;
 const IcoWarn    = () => <Ico d={['M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z','M12 9v4','M12 17h.01']} size={20} />;
+const IcoPlus    = () => <Ico d={['M12 5v14','M5 12h14']} size={20} stroke={2} />;
+
+/* ── HELPERS ────────────────────────────────────────────────────────────── */
+function crewInfo(weightLbs, itemType) {
+  const bulky = /sofa|sectional|couch|armoire|wardrobe|piano|cabinet/i.test(itemType||'');
+  if (weightLbs >= 100 || bulky) return { count: 2, label: '2+ people required', color: 'var(--orange-600)' };
+  if (weightLbs >= 50)           return { count: 2, label: '2 people recommended', color: 'var(--blue-600)' };
+  return                                { count: 1, label: '1 person can manage', color: 'var(--action-primary)' };
+}
 
 /* ── STEP BAR ───────────────────────────────────────────────────────────── */
 function StepBar({ current }) {
-  const labels = ['Position','Capture','Review'];
+  const labels = ['Photos','Material','Review'];
   return (
     <div className="step-bar">
       <div style={{display:'flex',alignItems:'center'}}>
         {labels.map((lbl,i) => (
           <React.Fragment key={i}>
             <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
-              <div style={{
-                width:28,height:28,borderRadius:'50%',
-                display:'flex',alignItems:'center',justifyContent:'center',
-                background: i<current?'var(--action-primary)':i===current?'var(--action-secondary)':'transparent',
-                border:`2px solid ${i<current?'var(--action-primary)':i===current?'var(--action-secondary)':'var(--gray-300)'}`,
-                color:i<=current?'#fff':'var(--gray-400)', fontSize:12, fontWeight:700,
-              }}>
+              <div style={{width:28,height:28,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:i<current?'var(--action-primary)':i===current?'var(--action-secondary)':'transparent',border:`2px solid ${i<current?'var(--action-primary)':i===current?'var(--action-secondary)':'var(--gray-300)'}`,color:i<=current?'#fff':'var(--gray-400)',fontSize:12,fontWeight:700}}>
                 {i<current?<IcoCheck />:i+1}
               </div>
               <span style={{fontSize:10,fontWeight:i===current?700:400,color:i===current?'var(--action-secondary)':'var(--gray-500)'}}>{lbl}</span>
@@ -197,7 +161,6 @@ function ScreenHome({ go, scans }) {
         <div style={{flex:1}} />
         <div style={{width:32,height:32,borderRadius:'50%',background:'var(--blue-700)',color:'#fff',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>JD</div>
       </div>
-
       <div style={{background:'var(--gray-0)',borderBottom:'1px solid var(--gray-200)',padding:'28px 20px 24px'}}>
         <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}}>Item Scanner</div>
         <h1 style={{fontSize:26,fontWeight:700,color:'var(--gray-800)',lineHeight:1.25,marginBottom:8}}>Scan Your Furniture</h1>
@@ -209,29 +172,23 @@ function ScreenHome({ go, scans }) {
           <label className="skid-btn skid-btn--tertiary skid-btn--lg" style={{width:'100%',gap:10,cursor:'pointer'}}>
             <IcoUpload />Upload a Photo
             <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>{
-              const file = e.target.files[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = ev => go(2, ev.target.result);
+              const file=e.target.files[0]; if(!file) return;
+              const reader=new FileReader();
+              reader.onload=ev=>go(1,[ev.target.result]);
               reader.readAsDataURL(file);
             }} />
           </label>
         </div>
       </div>
-
       <div style={{padding:'16px 16px 8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <span style={{fontSize:11,fontWeight:700,color:'var(--gray-600)',textTransform:'uppercase',letterSpacing:'.5px'}}>Recent Scans</span>
       </div>
-
-      {scans.length === 0 ? (
-        <div style={{padding:'32px 16px',textAlign:'center',color:'var(--gray-400)',fontSize:14}}>
-          No scans yet — tap Start Scanning to begin.
-        </div>
-      ) : scans.map((item,i) => (
-        <div key={i} className="skid-card" onClick={()=>go(3,null,item)}
-          style={{margin:'0 16px 8px',padding:'12px 14px',display:'flex',gap:12,alignItems:'center',cursor:'pointer'}}>
+      {scans.length===0 ? (
+        <div style={{padding:'32px 16px',textAlign:'center',color:'var(--gray-400)',fontSize:14}}>No scans yet — tap Start Scanning to begin.</div>
+      ) : scans.map((item,i)=>(
+        <div key={i} className="skid-card" onClick={()=>go(4,null,null,item)} style={{margin:'0 16px 8px',padding:'12px 14px',display:'flex',gap:12,alignItems:'center',cursor:'pointer'}}>
           <div style={{width:48,height:48,borderRadius:6,overflow:'hidden',flexShrink:0,background:'var(--gray-100)'}}>
-            {item.image && <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}} />}
+            {item.images?.[0] && <img src={item.images[0]} style={{width:'100%',height:'100%',objectFit:'cover'}} />}
           </div>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontWeight:700,fontSize:14,color:'var(--gray-800)',marginBottom:2}}>{item.itemType}</div>
@@ -239,8 +196,7 @@ function ScreenHome({ go, scans }) {
           </div>
           <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
             <span style={{fontSize:11,color:'var(--gray-500)'}}>{item.date}</span>
-            <button className="skid-btn skid-btn--secondary skid-btn--sm" style={{height:28,fontSize:12}}
-              onClick={e=>{e.stopPropagation();go(4,null,item);}}>Post</button>
+            <button className="skid-btn skid-btn--secondary skid-btn--sm" style={{height:28,fontSize:12}} onClick={e=>{e.stopPropagation();go(5,null,null,item);}}>Post</button>
           </div>
         </div>
       ))}
@@ -249,96 +205,166 @@ function ScreenHome({ go, scans }) {
 }
 
 /* ── SCREEN 1 · CAPTURE ─────────────────────────────────────────────────── */
-function ScreenCapture({ go, active }) {
+function ScreenCapture({ go, active, images, setImages }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
   useEffect(() => {
-    if (!active) {
-      streamRef.current?.getTracks().forEach(t=>t.stop());
-      streamRef.current = null;
-      return;
-    }
-    navigator.mediaDevices?.getUserMedia({ video: { facingMode: 'environment' } })
-      .then(stream => {
-        streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
-      }).catch(()=>{});
-    return () => {
-      streamRef.current?.getTracks().forEach(t=>t.stop());
-      streamRef.current = null;
-    };
+    if (!active) { streamRef.current?.getTracks().forEach(t=>t.stop()); streamRef.current=null; return; }
+    navigator.mediaDevices?.getUserMedia({video:{facingMode:'environment'}})
+      .then(stream=>{ streamRef.current=stream; if(videoRef.current) videoRef.current.srcObject=stream; })
+      .catch(()=>{});
+    return ()=>{ streamRef.current?.getTracks().forEach(t=>t.stop()); streamRef.current=null; };
   }, [active]);
 
   const takePhoto = () => {
     const video = videoRef.current;
-    if (!video?.srcObject) { go(2, null); return; }
+    if (!video?.srcObject) return;
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    go(2, canvas.toDataURL('image/jpeg', 0.85));
+    canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+    canvas.getContext('2d').drawImage(video,0,0);
+    setImages(prev => [...prev, canvas.toDataURL('image/jpeg',0.85)]);
   };
+
+  const addFromLibrary = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setImages(prev => [...prev, ev.target.result]);
+    reader.readAsDataURL(file);
+  };
+
+  const canProceed = images.length > 0;
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',background:'var(--gray-0)'}}>
       <div className="back-bar">
         <button className="skid-btn skid-btn--ghost skid-btn--sm" style={{width:36,height:36,padding:0}} onClick={()=>go(0)}><IcoBack /></button>
         <span style={{fontWeight:700,fontSize:16,color:'var(--gray-800)'}}>Scan Item</span>
+        {canProceed && <button className="skid-btn skid-btn--secondary skid-btn--sm" style={{marginLeft:'auto'}} onClick={()=>go(2)}>Next →</button>}
       </div>
-      <StepBar current={1} />
+      <StepBar current={0} />
       <div className="cam">
         <div className="cam-noise" />
         <video ref={videoRef} autoPlay playsInline muted />
         <div className="scan-line" />
         <div className="corner corner--tl" /><div className="corner corner--tr" />
         <div className="corner corner--bl" /><div className="corner corner--br" />
-        <div style={{position:'absolute',top:'45%',left:'50%',transform:'translate(-50%,-50%)',background:'rgba(0,0,0,.7)',borderRadius:12,padding:'12px 20px',textAlign:'center',border:'1px solid rgba(255,255,255,.1)',whiteSpace:'nowrap'}}>
-          <div style={{color:'#fff',fontWeight:700,fontSize:15,marginBottom:3}}>Center item in frame</div>
-          <div style={{color:'rgba(255,255,255,.55)',fontSize:13}}>Keep 6" clearance on all sides</div>
+        <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',background:'rgba(0,0,0,.7)',borderRadius:12,padding:'10px 18px',textAlign:'center',border:'1px solid rgba(255,255,255,.1)',whiteSpace:'nowrap'}}>
+          <div style={{color:'#fff',fontWeight:700,fontSize:14,marginBottom:2}}>
+            {images.length===0 ? 'Take a front photo' : images.length===1 ? 'Add a side photo for better depth' : 'Looking good!'}
+          </div>
+          <div style={{color:'rgba(255,255,255,.55)',fontSize:12}}>Place a coin or banana next to item for scale</div>
         </div>
+        {/* Photo strip */}
+        {images.length > 0 && (
+          <div className="photo-strip">
+            {images.map((img,i)=>(
+              <img key={i} src={img} className="photo-thumb" />
+            ))}
+            {images.length < 3 && (
+              <label className="photo-thumb--add" title="Add from library">
+                <IcoPlus />
+                <input type="file" accept="image/*" style={{display:'none'}} onChange={addFromLibrary} />
+              </label>
+            )}
+          </div>
+        )}
         <div className="cam-footer">
-          <div className="cam-ctrl" onClick={()=>go(0)}>Cancel</div>
+          <div className="cam-ctrl" onClick={()=>go(0)} style={{fontSize:11,fontWeight:700}}>Cancel</div>
           <button className="shutter" onClick={takePhoto}>
             <div style={{width:60,height:60,borderRadius:'50%',background:'#fff',border:'2.5px solid rgba(0,0,0,.08)'}} />
           </button>
-          <div className="cam-ctrl">⚡</div>
+          <label className="cam-ctrl" title="Upload from library" style={{cursor:'pointer'}}>
+            📁
+            <input type="file" accept="image/*" style={{display:'none'}} onChange={addFromLibrary} />
+          </label>
         </div>
       </div>
-      <div style={{padding:'12px 16px',background:'var(--orange-50)',borderTop:'1px solid var(--orange-100)',fontSize:13,color:'var(--orange-800)'}}>
-        Place a coin, banana, or water bottle next to the item for better accuracy
+      {canProceed && (
+        <div style={{padding:'12px 16px',background:'var(--gray-0)',borderTop:'1px solid var(--gray-200)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <span style={{fontSize:13,color:'var(--gray-600)'}}>{images.length} photo{images.length>1?'s':''} captured</span>
+          <button className="skid-btn skid-btn--primary skid-btn--md" onClick={()=>go(2)}>Next: Material →</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── SCREEN 2 · MATERIAL PICKER ─────────────────────────────────────────── */
+const MATERIALS = [
+  { id:'wood',        icon:'🪵', label:'Solid Wood',    sub:'Oak, pine, walnut', lbsPerCuFt: 45 },
+  { id:'upholstered', icon:'🛋️', label:'Upholstered',   sub:'Sofa, chair, ottoman', lbsPerCuFt: 22 },
+  { id:'particleboard',icon:'📦',label:'Particleboard', sub:'IKEA-style, MDF', lbsPerCuFt: 35 },
+  { id:'metal',       icon:'🔩', label:'Metal',         sub:'Steel, iron, aluminum', lbsPerCuFt: 90 },
+  { id:'glass',       icon:'🪟', label:'Glass / Mixed', sub:'Cabinets, shelves', lbsPerCuFt: 30 },
+  { id:'unknown',     icon:'❓', label:'Not Sure',      sub:'Let AI decide', lbsPerCuFt: null },
+];
+
+function ScreenMaterial({ go, material, setMaterial }) {
+  return (
+    <div style={{flex:1,display:'flex',flexDirection:'column',background:'var(--gray-50)'}}>
+      <div className="back-bar">
+        <button className="skid-btn skid-btn--ghost skid-btn--sm" style={{width:36,height:36,padding:0}} onClick={()=>go(1)}><IcoBack /></button>
+        <span style={{fontWeight:700,fontSize:16,color:'var(--gray-800)'}}>What's it made of?</span>
+      </div>
+      <StepBar current={1} />
+      <div style={{flex:1,padding:'20px 16px',overflow:'auto'}}>
+        <p style={{fontSize:14,color:'var(--gray-600)',marginBottom:16,lineHeight:1.5}}>
+          Helps us give you a more accurate weight estimate.
+        </p>
+        <div className="material-grid">
+          {MATERIALS.map(m=>(
+            <div key={m.id} className={`material-tile${material===m.id?' selected':''}`} onClick={()=>setMaterial(m.id)}>
+              {material===m.id && (
+                <div style={{position:'absolute',top:8,right:8,width:18,height:18,borderRadius:'50%',background:'var(--blue-600)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <IcoCheck />
+                </div>
+              )}
+              <div className="material-tile__icon">{m.icon}</div>
+              <div>
+                <div className="material-tile__label">{m.label}</div>
+                <div className="material-tile__sub">{m.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{padding:'12px 16px',background:'var(--gray-0)',borderTop:'1px solid var(--gray-200)'}}>
+        <button className="skid-btn skid-btn--primary skid-btn--lg" style={{width:'100%'}} onClick={()=>go(3)} disabled={!material}>
+          Analyze →
+        </button>
       </div>
     </div>
   );
 }
 
-/* ── SCREEN 2 · PROCESSING ──────────────────────────────────────────────── */
-function ScreenProcessing({ go, active, image, onResult }) {
+/* ── SCREEN 3 · PROCESSING ──────────────────────────────────────────────── */
+function ScreenProcessing({ go, active, images, material, onResult }) {
   const [step, setStep] = useState(0);
   const [error, setError] = useState(null);
-  const steps = ['Photo received','Detecting item type','Measuring dimensions','Estimating weight'];
+  const steps = ['Photos received','Detecting item type','Measuring dimensions','Estimating weight'];
 
   useEffect(() => {
     if (!active) { setStep(0); setError(null); return; }
-    if (!image) { setError('No image captured. Please try again.'); return; }
+    if (!images?.length) { setError('No photos captured. Please go back and take a photo.'); return; }
     setStep(0); setError(null);
-    let s = 0;
-    const advance = setInterval(() => { s = Math.min(s+1, steps.length-1); setStep(s); }, 900);
-    fetch(`${API_URL}/analyze`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image }),
+    let s=0;
+    const advance = setInterval(()=>{ s=Math.min(s+1,steps.length-1); setStep(s); },900);
+    const mat = MATERIALS.find(m=>m.id===material);
+    fetch(`${API_URL}/analyze`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ images, material: mat?.label || 'Unknown', materialDensity: mat?.lbsPerCuFt || null }),
     })
-      .then(r => r.json())
-      .then(data => {
-        clearInterval(advance);
-        setStep(steps.length-1);
-        if (data.error) { setError(data.error); return; }
-        setTimeout(() => { onResult({...data, image, date:'Just now'}); go(3); }, 600);
+      .then(r=>r.json())
+      .then(data=>{
+        clearInterval(advance); setStep(steps.length-1);
+        if(data.error){ setError(data.error); return; }
+        setTimeout(()=>{ onResult({...data,images,material,date:'Just now'}); go(4); },600);
       })
-      .catch(err => { clearInterval(advance); setError('Could not reach the server. Please try again.'); });
-    return () => clearInterval(advance);
-  }, [active, image]);
+      .catch(()=>{ clearInterval(advance); setError('Could not reach the server. Please try again.'); });
+    return ()=>clearInterval(advance);
+  },[active,images,material]);
 
   const pct = Math.round(((step+1)/steps.length)*100);
 
@@ -348,15 +374,16 @@ function ScreenProcessing({ go, active, image, onResult }) {
         <span style={{fontWeight:700,fontSize:16,color:'var(--gray-800)'}}>{error?'Oops':'Analyzing...'}</span>
       </div>
       <StepBar current={2} />
-      <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'28px 24px',gap:28}}>
-        <div style={{width:'100%',maxWidth:320,aspectRatio:'4/3',background:'var(--gray-200)',borderRadius:8,border:'1px solid var(--gray-300)',position:'relative',overflow:'hidden'}}>
-          {image
-            ? <img src={image} style={{width:'100%',height:'100%',objectFit:'cover'}} />
-            : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--gray-400)'}}>No image</div>
-          }
-          {!error && <div style={{position:'absolute',left:0,right:0,height:2,background:'linear-gradient(90deg,transparent,rgba(90,191,224,.9),transparent)',animation:'scan 1.8s ease-in-out infinite alternate',borderRadius:1}} />}
+      <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'28px 24px',gap:24}}>
+        {/* Photo previews */}
+        <div style={{display:'flex',gap:8,width:'100%',maxWidth:320}}>
+          {(images||[]).slice(0,3).map((img,i)=>(
+            <div key={i} style={{flex:1,aspectRatio:'4/3',borderRadius:8,overflow:'hidden',border:'1px solid var(--gray-300)',position:'relative'}}>
+              <img src={img} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+              {!error && i===0 && <div style={{position:'absolute',left:0,right:0,height:2,background:'linear-gradient(90deg,transparent,rgba(90,191,224,.9),transparent)',animation:'scan 1.8s ease-in-out infinite alternate',borderRadius:1}} />}
+            </div>
+          ))}
         </div>
-
         {error ? (
           <>
             <div className="skid-alert skid-alert--error" style={{width:'100%',maxWidth:320}}>
@@ -380,7 +407,7 @@ function ScreenProcessing({ go, active, image, onResult }) {
               </div>
             </div>
             <div style={{width:'100%',maxWidth:320,display:'flex',flexDirection:'column',gap:12}}>
-              {steps.map((label,i) => (
+              {steps.map((label,i)=>(
                 <div key={i} className="proc-step" style={{display:'flex',alignItems:'center',gap:12,animationDelay:`${i*.12}s`}}>
                   <div style={{width:26,height:26,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:i<=step?'var(--action-primary)':'var(--gray-200)',border:`2px solid ${i<=step?'var(--action-primary)':'var(--gray-300)'}`,color:'#fff',transition:'all 300ms ease'}}>
                     {i<=step?<IcoCheck />:null}
@@ -396,14 +423,16 @@ function ScreenProcessing({ go, active, image, onResult }) {
   );
 }
 
-/* ── SCREEN 3 · RESULTS ─────────────────────────────────────────────────── */
+/* ── SCREEN 4 · RESULTS ─────────────────────────────────────────────────── */
 function ScreenResults({ go, units, showConfidence, result }) {
   if (!result) return null;
   const u = units==='cm';
-  const W  = u ? Math.round(result.width  *2.54)+' cm' : result.width+'"';
-  const H  = u ? Math.round(result.height *2.54)+' cm' : result.height+'"';
-  const D  = u ? Math.round(result.depth  *2.54)+' cm' : result.depth+'"';
-  const WT = u ? Math.round(result.weightLbs*.453592)+' kg' : '~'+result.weightLbs+' lbs';
+  const W  = u?Math.round(result.width *2.54)+' cm':result.width+'"';
+  const H  = u?Math.round(result.height*2.54)+' cm':result.height+'"';
+  const D  = u?Math.round(result.depth *2.54)+' cm':result.depth+'"';
+  const WT = u?Math.round(result.weightLbs*.453592)+' kg':'~'+result.weightLbs+' lbs';
+  const crew = crewInfo(result.weightLbs, result.itemType);
+  const mainImg = result.images?.[0];
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',background:'#111'}}>
@@ -413,11 +442,9 @@ function ScreenResults({ go, units, showConfidence, result }) {
         <span className="skid-badge skid-badge--blue skid-badge--solid skid-badge--sm">{result.itemType}</span>
       </div>
 
+      {/* Photo(s) */}
       <div className="results-photo">
-        {result.image
-          ? <img src={result.image} alt={result.itemType} />
-          : <div style={{height:200,background:'var(--gray-800)',borderRadius:8}} />
-        }
+        {mainImg ? <img src={mainImg} alt={result.itemType} /> : <div style={{height:200,background:'var(--gray-800)',borderRadius:8}} />}
         {/* Width arrow */}
         <div style={{position:'absolute',bottom:14,left:36,right:36,display:'flex',alignItems:'center'}}>
           <div style={{width:1.5,height:8,background:'var(--blue-400)'}} />
@@ -444,6 +471,15 @@ function ScreenResults({ go, units, showConfidence, result }) {
       </div>
 
       <div className="results-card">
+        {/* Crew badge */}
+        <div className="crew-badge" style={{background: crew.count>=2?'var(--orange-50)':'var(--green-50)', borderColor: crew.count>=2?'var(--orange-200)':'var(--green-200)'}}>
+          <div style={{fontSize:28,lineHeight:1}}>{'🧍'.repeat(Math.min(crew.count,2))}{crew.count>2?'+':''}</div>
+          <div>
+            <div style={{fontWeight:700,fontSize:14,color: crew.count>=2?'var(--orange-800)':'var(--green-800)'}}>{crew.label}</div>
+            <div style={{fontSize:12,color:'var(--gray-600)'}}>Based on {result.weightLbs} lb estimated weight</div>
+          </div>
+        </div>
+
         {showConfidence && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
             <span style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px',whiteSpace:'nowrap'}}>Confidence</span>
@@ -453,6 +489,7 @@ function ScreenResults({ go, units, showConfidence, result }) {
             <span style={{fontSize:13,fontWeight:700,color:'var(--action-primary)',whiteSpace:'nowrap'}}>{result.confidence}%</span>
           </div>
         )}
+
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:14}}>
           {[['Width',W],['Height',H],['Depth',D]].map(([lbl,val])=>(
             <div key={lbl} className="stat-cell">
@@ -461,6 +498,7 @@ function ScreenResults({ go, units, showConfidence, result }) {
             </div>
           ))}
         </div>
+
         <div className="skid-alert skid-alert--warning" style={{marginBottom:14}}>
           <IcoWarn />
           <div className="skid-alert__body">
@@ -468,11 +506,12 @@ function ScreenResults({ go, units, showConfidence, result }) {
             <div className="skid-alert__text">{result.handlingNotes}</div>
           </div>
         </div>
+
         <div style={{display:'flex',flexDirection:'column',gap:8}}>
-          <button className="skid-btn skid-btn--primary skid-btn--lg" style={{width:'100%',gap:8}} onClick={()=>go(4)}>
+          <button className="skid-btn skid-btn--primary skid-btn--lg" style={{width:'100%',gap:8}} onClick={()=>go(5)}>
             <IcoTruck />Post Shipment
           </button>
-          <button className="skid-btn skid-btn--tertiary skid-btn--lg" style={{width:'100%',gap:8}} onClick={()=>go(4)}>
+          <button className="skid-btn skid-btn--tertiary skid-btn--lg" style={{width:'100%',gap:8}} onClick={()=>go(5)}>
             <IcoSave />Save to Inventory
           </button>
         </div>
@@ -481,9 +520,10 @@ function ScreenResults({ go, units, showConfidence, result }) {
   );
 }
 
-/* ── SCREEN 4 · NEXT STEPS ──────────────────────────────────────────────── */
+/* ── SCREEN 5 · NEXT STEPS ──────────────────────────────────────────────── */
 function ScreenNextSteps({ go, result }) {
-  const r = result || {};
+  const r = result||{};
+  const crew = crewInfo(r.weightLbs, r.itemType);
   const actions = [
     { icon: <IcoTruck />, title: 'Post a Shipment',   sub: 'Get quotes from feedback-rated carriers', primary: true  },
     { icon: <IcoSave />,  title: 'Save to Inventory', sub: 'Add to your items list for later',        primary: false },
@@ -492,7 +532,7 @@ function ScreenNextSteps({ go, result }) {
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',background:'var(--gray-50)'}}>
       <div className="back-bar">
-        <button className="skid-btn skid-btn--ghost skid-btn--sm" style={{width:36,height:36,padding:0}} onClick={()=>go(3)}><IcoBack /></button>
+        <button className="skid-btn skid-btn--ghost skid-btn--sm" style={{width:36,height:36,padding:0}} onClick={()=>go(4)}><IcoBack /></button>
         <img src="project/assets/uship-logo-blue.svg" style={{height:18}} alt="uShip" />
       </div>
       <div className="skid-card" style={{margin:'16px 16px 0',padding:'14px 16px'}}>
@@ -503,8 +543,11 @@ function ScreenNextSteps({ go, result }) {
           </div>
           <span className="skid-badge skid-badge--green skid-badge--solid">{r.confidence}% match</span>
         </div>
-        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
           {(r.tags||[]).map((tag,i)=><span key={i} className="skid-tag skid-tag--compact">{tag}</span>)}
+        </div>
+        <div style={{fontSize:13,color:crew.count>=2?'var(--orange-700)':'var(--green-700)',fontWeight:700}}>
+          {'🧍'.repeat(Math.min(crew.count,2))} {crew.label}
         </div>
       </div>
       <div style={{padding:'16px 16px 0'}}>
@@ -535,20 +578,25 @@ function ScreenNextSteps({ go, result }) {
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [screen, setScreen] = useState(0);
-  const [image, setImage]   = useState(null);
-  const [result, setResult] = useState(null);
-  const [scans, setScans]   = useState([]);
+  const [images, setImages]   = useState([]);
+  const [material, setMaterial] = useState('unknown');
+  const [result, setResult]   = useState(null);
+  const [scans, setScans]     = useState([]);
 
-  const go = (n, img, res) => {
-    if (img !== undefined) setImage(img);
-    if (res !== undefined) setResult(res);
+  const go = (n, imgs, mat, res) => {
+    if (imgs !== undefined && imgs !== null) setImages(imgs);
+    if (mat  !== undefined && mat  !== null) setMaterial(mat);
+    if (res  !== undefined && res  !== null) setResult(res);
     setScreen(n);
   };
 
   const onResult = (data) => {
     setResult(data);
-    setScans(prev => [data, ...prev].slice(0, 10));
+    setScans(prev=>[data,...prev].slice(0,10));
   };
+
+  // Reset images/material when going back to home
+  useEffect(()=>{ if(screen===0){ setImages([]); setMaterial('unknown'); } },[screen]);
 
   return (
     <>
@@ -556,8 +604,9 @@ function App() {
         <div className="screens">
           {[
             <ScreenHome go={go} scans={scans} />,
-            <ScreenCapture go={go} active={screen===1} />,
-            <ScreenProcessing go={go} active={screen===2} image={image} onResult={onResult} />,
+            <ScreenCapture go={go} active={screen===1} images={images} setImages={setImages} />,
+            <ScreenMaterial go={go} material={material} setMaterial={setMaterial} />,
+            <ScreenProcessing go={go} active={screen===3} images={images} material={material} onResult={onResult} />,
             <ScreenResults go={go} units={t.units} showConfidence={t.showConfidence} result={result} />,
             <ScreenNextSteps go={go} result={result} />,
           ].map((s,i)=>(
@@ -565,7 +614,6 @@ function App() {
           ))}
         </div>
       </div>
-
       <TweaksPanel>
         <TweakSection label="Measurements" />
         <TweakRadio label="Units" value={t.units} options={['in','cm']} onChange={v=>setTweak('units',v)} />
