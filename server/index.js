@@ -11,7 +11,7 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.post('/analyze', async (req, res) => {
-  const { images, image, material, materialDensity } = req.body;
+  const { images, image, materials, material, materialDensity } = req.body;
 
   // Accept either multi-photo `images` array or legacy single `image`
   const photoList = images?.length ? images : image ? [image] : [];
@@ -23,8 +23,10 @@ app.post('/analyze', async (req, res) => {
     return { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
   });
 
-  const materialHint = material && material !== 'Unknown'
-    ? `\nThe user identified the material as: ${material}${materialDensity ? ` (density ≈ ${materialDensity} lbs/cu ft — use this for your weight calculation)` : ''}.`
+  const matList = materials?.length ? materials : (material ? [material] : []);
+  const knownMats = matList.filter(m => m !== 'Unknown' && m !== 'Not Sure');
+  const materialHint = knownMats.length
+    ? `\nThe user identified the material(s) as: ${knownMats.join(' + ')}${materialDensity ? ` (blended density ≈ ${materialDensity} lbs/cu ft — use this for your weight calculation)` : ''}. Account for heavier materials like marble or metal dominating the weight.`
     : '';
 
   const photoNote = photoList.length > 1

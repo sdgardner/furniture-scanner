@@ -259,7 +259,13 @@ function ScreenCapture({ go, active, images, setImages }) {
         {images.length > 0 && (
           <div className="photo-strip">
             {images.map((img,i)=>(
-              <img key={i} src={img} className="photo-thumb" />
+              <div key={i} style={{position:'relative',flexShrink:0}}>
+                <img src={img} className="photo-thumb" />
+                <button onClick={()=>setImages(prev=>prev.filter((_,j)=>j!==i))}
+                  style={{position:'absolute',top:-5,right:-5,width:20,height:20,borderRadius:'50%',background:'rgba(200,30,30,.9)',color:'#fff',border:'2px solid rgba(255,255,255,.8)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,lineHeight:1,padding:0}}>
+                  ✕
+                </button>
+              </div>
             ))}
             {images.length < 3 && (
               <label className="photo-thumb--add" title="Add from library">
@@ -301,37 +307,67 @@ const MATERIALS = [
   { id:'unknown',     icon:'❓', label:'Not Sure',      sub:'Let AI decide', lbsPerCuFt: null },
 ];
 
-function ScreenMaterial({ go, material, setMaterial }) {
+const CREW_OPTIONS = [
+  { n: 1, icon: '🧍', label: '1 person' },
+  { n: 2, icon: '🧍🧍', label: '2 people' },
+  { n: 3, icon: '🧍🧍🧍', label: '3+ people' },
+];
+
+function ScreenMaterial({ go, materials, setMaterials, crew, setCrew }) {
+  const toggle = (id) => setMaterials(prev =>
+    prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id]
+  );
+  const canProceed = crew !== null;
+
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',background:'var(--gray-50)'}}>
       <div className="back-bar">
         <button className="skid-btn skid-btn--ghost skid-btn--sm" style={{width:36,height:36,padding:0}} onClick={()=>go(1)}><IcoBack /></button>
-        <span style={{fontWeight:700,fontSize:16,color:'var(--gray-800)'}}>What's it made of?</span>
+        <span style={{fontWeight:700,fontSize:16,color:'var(--gray-800)'}}>Item Details</span>
       </div>
       <StepBar current={1} />
       <div style={{flex:1,padding:'20px 16px',overflow:'auto'}}>
-        <p style={{fontSize:14,color:'var(--gray-600)',marginBottom:16,lineHeight:1.5}}>
-          Helps us give you a more accurate weight estimate.
-        </p>
-        <div className="material-grid">
-          {MATERIALS.map(m=>(
-            <div key={m.id} className={`material-tile${material===m.id?' selected':''}`} onClick={()=>setMaterial(m.id)}>
-              {material===m.id && (
-                <div style={{position:'absolute',top:8,right:8,width:18,height:18,borderRadius:'50%',background:'var(--blue-600)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                  <IcoCheck />
+
+        {/* Material */}
+        <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.4px'}}>What's it made of? <span style={{fontWeight:400,color:'var(--gray-500)',textTransform:'none',letterSpacing:0}}>(select all that apply)</span></p>
+        <div className="material-grid" style={{marginBottom:24}}>
+          {MATERIALS.map(m=>{
+            const sel = materials.includes(m.id);
+            return (
+              <div key={m.id} className={`material-tile${sel?' selected':''}`} style={{position:'relative'}} onClick={()=>toggle(m.id)}>
+                {sel && (
+                  <div style={{position:'absolute',top:6,right:6,width:18,height:18,borderRadius:'50%',background:'var(--blue-600)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <IcoCheck />
+                  </div>
+                )}
+                <div className="material-tile__icon">{m.icon}</div>
+                <div>
+                  <div className="material-tile__label">{m.label}</div>
+                  <div className="material-tile__sub">{m.sub}</div>
                 </div>
-              )}
-              <div className="material-tile__icon">{m.icon}</div>
-              <div>
-                <div className="material-tile__label">{m.label}</div>
-                <div className="material-tile__sub">{m.sub}</div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+
+        {/* Crew */}
+        <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.4px'}}>How many people to move it?</p>
+        <div style={{display:'flex',gap:8,marginBottom:8}}>
+          {CREW_OPTIONS.map(({n,icon,label})=>{
+            const sel = crew===n;
+            return (
+              <div key={n} className={`material-tile${sel?' selected':''}`} style={{flex:1,padding:'12px 6px'}} onClick={()=>setCrew(n)}>
+                <div style={{fontSize:20,lineHeight:1}}>{icon}</div>
+                <div className="material-tile__label" style={{fontSize:12,marginTop:2}}>{label}</div>
+              </div>
+            );
+          })}
+        </div>
+        {!crew && <p style={{fontSize:12,color:'var(--gray-500)',marginTop:4}}>Required — select how many movers needed.</p>}
+
       </div>
       <div style={{padding:'12px 16px',background:'var(--gray-0)',borderTop:'1px solid var(--gray-200)'}}>
-        <button className="skid-btn skid-btn--primary skid-btn--lg" style={{width:'100%'}} onClick={()=>go(3)} disabled={!material}>
+        <button className="skid-btn skid-btn--primary skid-btn--lg" style={{width:'100%'}} onClick={()=>go(3)} disabled={!canProceed}>
           Analyze →
         </button>
       </div>
@@ -340,7 +376,7 @@ function ScreenMaterial({ go, material, setMaterial }) {
 }
 
 /* ── SCREEN 3 · PROCESSING ──────────────────────────────────────────────── */
-function ScreenProcessing({ go, active, images, material, onResult }) {
+function ScreenProcessing({ go, active, images, materials, crew, onResult }) {
   const [step, setStep] = useState(0);
   const [error, setError] = useState(null);
   const steps = ['Photos received','Detecting item type','Measuring dimensions','Estimating weight'];
@@ -351,17 +387,21 @@ function ScreenProcessing({ go, active, images, material, onResult }) {
     setStep(0); setError(null);
     let s=0;
     const advance = setInterval(()=>{ s=Math.min(s+1,steps.length-1); setStep(s); },900);
-    const mat = MATERIALS.find(m=>m.id===material);
+    const selectedMats = MATERIALS.filter(m=>materials.includes(m.id));
+    const matLabels = selectedMats.length ? selectedMats.map(m=>m.label) : ['Unknown'];
+    const avgDensity = selectedMats.filter(m=>m.lbsPerCuFt).length
+      ? Math.round(selectedMats.filter(m=>m.lbsPerCuFt).reduce((s,m)=>s+m.lbsPerCuFt,0)/selectedMats.filter(m=>m.lbsPerCuFt).length)
+      : null;
     fetch(`${API_URL}/analyze`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ images, material: mat?.label || 'Unknown', materialDensity: mat?.lbsPerCuFt || null }),
+      body:JSON.stringify({ images, materials: matLabels, materialDensity: avgDensity }),
     })
       .then(r=>r.json())
       .then(data=>{
         clearInterval(advance); setStep(steps.length-1);
         if(data.error){ setError(data.error); return; }
-        setTimeout(()=>{ onResult({...data,images,material,date:'Just now'}); go(4); },600);
+        setTimeout(()=>{ onResult({...data,images,materials,crew,date:'Just now'}); go(4); },600);
       })
       .catch(()=>{ clearInterval(advance); setError('Could not reach the server. Please try again.'); });
     return ()=>clearInterval(advance);
@@ -432,7 +472,9 @@ function ScreenResults({ go, units, showConfidence, result }) {
   const H  = u?Math.round(result.height*2.54)+' cm':result.height+'"';
   const D  = u?Math.round(result.depth *2.54)+' cm':result.depth+'"';
   const WT = u?Math.round(result.weightLbs*.453592)+' kg':'~'+result.weightLbs+' lbs';
-  const crew = crewInfo(result.weightLbs, result.itemType);
+  const crewCount = result.crew || 1;
+  const crewLabel = crewCount===1 ? '1 person can manage' : crewCount===2 ? '2 people needed' : '3+ people needed';
+  const crewHeavy = crewCount >= 2;
   const mainImg = result.images?.[0];
 
   return (
@@ -473,11 +515,11 @@ function ScreenResults({ go, units, showConfidence, result }) {
 
       <div className="results-card">
         {/* Crew badge */}
-        <div className="crew-badge" style={{background: crew.count>=2?'var(--orange-50)':'var(--green-50)', borderColor: crew.count>=2?'var(--orange-200)':'var(--green-200)'}}>
-          <div style={{fontSize:28,lineHeight:1}}>{'🧍'.repeat(Math.min(crew.count,2))}{crew.count>2?'+':''}</div>
+        <div className="crew-badge" style={{background: crewHeavy?'var(--orange-50)':'var(--green-50)', borderColor: crewHeavy?'var(--orange-200)':'var(--green-200)'}}>
+          <div style={{fontSize:28,lineHeight:1}}>{'🧍'.repeat(Math.min(crewCount,2))}{crewCount>2?'+':''}</div>
           <div>
-            <div style={{fontWeight:700,fontSize:14,color: crew.count>=2?'var(--orange-800)':'var(--green-800)'}}>{crew.label}</div>
-            <div style={{fontSize:12,color:'var(--gray-600)'}}>Based on {result.weightLbs} lb estimated weight</div>
+            <div style={{fontWeight:700,fontSize:14,color: crewHeavy?'var(--orange-800)':'var(--green-800)'}}>{crewLabel}</div>
+            <div style={{fontSize:12,color:'var(--gray-600)'}}>As selected by you</div>
           </div>
         </div>
 
@@ -547,8 +589,8 @@ function ScreenNextSteps({ go, result }) {
         <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
           {(r.tags||[]).map((tag,i)=><span key={i} className="skid-tag skid-tag--compact">{tag}</span>)}
         </div>
-        <div style={{fontSize:13,color:crew.count>=2?'var(--orange-700)':'var(--green-700)',fontWeight:700}}>
-          {'🧍'.repeat(Math.min(crew.count,2))} {crew.label}
+        <div style={{fontSize:13,color:(r.crew||1)>=2?'var(--orange-700)':'var(--green-700)',fontWeight:700}}>
+          {'🧍'.repeat(Math.min(r.crew||1,2))}{(r.crew||1)>2?'+ ':'  '}{(r.crew||1)===1?'1 person':(r.crew||1)===2?'2 people':'3+ people'} needed
         </div>
       </div>
       <div style={{padding:'16px 16px 0'}}>
@@ -579,14 +621,15 @@ function ScreenNextSteps({ go, result }) {
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [screen, setScreen] = useState(0);
-  const [images, setImages]   = useState([]);
-  const [material, setMaterial] = useState('unknown');
-  const [result, setResult]   = useState(null);
-  const [scans, setScans]     = useState([]);
+  const [images, setImages]     = useState([]);
+  const [materials, setMaterials] = useState([]);
+  const [crew, setCrew]         = useState(null);
+  const [result, setResult]     = useState(null);
+  const [scans, setScans]       = useState([]);
 
-  const go = (n, imgs, mat, res) => {
+  const go = (n, imgs, mats, res) => {
     if (imgs !== undefined && imgs !== null) setImages(imgs);
-    if (mat  !== undefined && mat  !== null) setMaterial(mat);
+    if (mats !== undefined && mats !== null) setMaterials(mats);
     if (res  !== undefined && res  !== null) setResult(res);
     setScreen(n);
   };
@@ -596,8 +639,8 @@ function App() {
     setScans(prev=>[data,...prev].slice(0,10));
   };
 
-  // Reset images/material when going back to home
-  useEffect(()=>{ if(screen===0){ setImages([]); setMaterial('unknown'); } },[screen]);
+  // Reset when going back to home
+  useEffect(()=>{ if(screen===0){ setImages([]); setMaterials([]); setCrew(null); } },[screen]);
 
   return (
     <>
@@ -606,8 +649,8 @@ function App() {
           {[
             <ScreenHome go={go} scans={scans} />,
             <ScreenCapture go={go} active={screen===1} images={images} setImages={setImages} />,
-            <ScreenMaterial go={go} material={material} setMaterial={setMaterial} />,
-            <ScreenProcessing go={go} active={screen===3} images={images} material={material} onResult={onResult} />,
+            <ScreenMaterial go={go} materials={materials} setMaterials={setMaterials} crew={crew} setCrew={setCrew} />,
+            <ScreenProcessing go={go} active={screen===3} images={images} materials={materials} crew={crew} onResult={onResult} />,
             <ScreenResults go={go} units={t.units} showConfidence={t.showConfidence} result={result} />,
             <ScreenNextSteps go={go} result={result} />,
           ].map((s,i)=>(
