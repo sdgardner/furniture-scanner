@@ -51,7 +51,8 @@ If you cannot identify furniture in the image, return:
       }]
     });
 
-    const text = response.content[0].text.trim();
+    const raw = response.content[0].text.trim();
+    const text = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/,'').trim();
     const json = JSON.parse(text);
     res.json(json);
   } catch (err) {
