@@ -416,7 +416,7 @@ function ScreenProcessing({ go, active, images, materials, crew, onResult }) {
       })
       .catch(()=>{ clearInterval(advance); setError('Could not reach the server. Please try again.'); });
     return ()=>clearInterval(advance);
-  },[active,images,material]);
+  },[active,images,materials]);
 
   const pct = Math.round(((step+1)/steps.length)*100);
 
