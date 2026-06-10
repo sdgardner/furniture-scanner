@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Furniture Scanner — uShip</title>
+  <title>Item Scanner — uShip</title>
   <link rel="stylesheet" href="project/colors_and_type.css">
   <link rel="stylesheet" href="project/components.css">
   <style>
@@ -130,6 +130,21 @@ function crewInfo(weightLbs, itemType) {
   return                                { count: 1, label: '1 person can manage', color: 'var(--action-primary)' };
 }
 
+function rigInfo(weightLbs) {
+  if (weightLbs >= 40000) return { icon: '🏗️', label: 'Crane required',        heavy: true  };
+  if (weightLbs >= 10000) return { icon: '⛓️',  label: 'Rigging crew required', heavy: true  };
+  if (weightLbs >= 3000)  return { icon: '🚜',  label: 'Forklift required',     heavy: true  };
+  return                         { icon: '🔧',  label: 'Pallet jack capable',   heavy: false };
+}
+
+const TRAILER_LABELS = {
+  flatbed: 'Flatbed trailer',
+  lowboy:  'Lowboy trailer',
+  RGN:     'RGN trailer',
+  enclosed:'Enclosed trailer',
+  standard:'Standard trailer',
+};
+
 /* ── STEP BAR ───────────────────────────────────────────────────────────── */
 function StepBar({ current }) {
   const labels = ['Photos','Material','Review'];
@@ -163,8 +178,8 @@ function ScreenHome({ go, scans }) {
       </div>
       <div style={{background:'var(--gray-0)',borderBottom:'1px solid var(--gray-200)',padding:'28px 20px 24px'}}>
         <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}}>Item Scanner</div>
-        <h1 style={{fontSize:26,fontWeight:700,color:'var(--gray-800)',lineHeight:1.25,marginBottom:8}}>Scan Your Furniture</h1>
-        <p style={{fontSize:15,color:'var(--gray-600)',lineHeight:1.55,marginBottom:16}}>Get instant weight and dimension estimates — before you ship.</p>
+        <h1 style={{fontSize:26,fontWeight:700,color:'var(--gray-800)',lineHeight:1.25,marginBottom:8}}>Scan Any Item</h1>
+        <p style={{fontSize:15,color:'var(--gray-600)',lineHeight:1.55,marginBottom:16}}>Instant weight, dimensions, and shipping estimates — for furniture and heavy machinery.</p>
         <div style={{background:'var(--blue-50)',border:'1px solid var(--blue-200)',borderRadius:8,padding:'12px 14px',marginBottom:18}}>
           <div style={{fontSize:12,fontWeight:700,color:'var(--blue-800)',marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
             📏 Better accuracy tip
@@ -312,9 +327,10 @@ const MATERIALS = [
   { id:'wood',        icon:'🪵', label:'Solid Wood',    sub:'Oak, pine, walnut', lbsPerCuFt: 45 },
   { id:'upholstered', icon:'🛋️', label:'Upholstered',   sub:'Sofa, chair, ottoman', lbsPerCuFt: 22 },
   { id:'particleboard',icon:'📦',label:'Particleboard', sub:'IKEA-style, MDF', lbsPerCuFt: 35 },
-  { id:'metal',       icon:'🔩', label:'Metal',         sub:'Steel, iron, aluminum', lbsPerCuFt: 90 },
-  { id:'marble',      icon:'🪨', label:'Marble',         sub:'Stone, granite top', lbsPerCuFt: 160 },
-  { id:'glass',       icon:'🪟', label:'Glass / Mixed', sub:'Cabinets, shelves', lbsPerCuFt: 30 },
+  { id:'metal',       icon:'🔩', label:'Metal',                  sub:'Steel, iron, aluminum', lbsPerCuFt: 90 },
+  { id:'castiron',    icon:'⚙️', label:'Cast Iron / Heavy Steel', sub:'Machinery, engines, frames', lbsPerCuFt: 450 },
+  { id:'marble',      icon:'🪨', label:'Marble',                  sub:'Stone, granite top', lbsPerCuFt: 160 },
+  { id:'glass',       icon:'🪟', label:'Glass / Mixed',           sub:'Cabinets, shelves', lbsPerCuFt: 30 },
   { id:'unknown',     icon:'❓', label:'Not Sure',      sub:'Let AI decide', lbsPerCuFt: null },
 ];
 
@@ -483,10 +499,14 @@ function ScreenResults({ go, units, showConfidence, result }) {
   const H  = u?Math.round(result.height*2.54)+' cm':result.height+'"';
   const D  = u?Math.round(result.depth *2.54)+' cm':result.depth+'"';
   const WT = u?Math.round(result.weightLbs*.453592)+' kg':'~'+result.weightLbs+' lbs';
-  const crewCount = result.crew || 1;
-  const crewLabel = crewCount===1 ? '1 person can manage' : crewCount===2 ? '2 people needed' : '3+ people needed';
-  const crewHeavy = crewCount >= 2;
-  const mainImg = result.images?.[0];
+  const isMachinery = result.itemCategory === 'machinery';
+  const weightTons  = (result.weightLbs / 2000).toFixed(1);
+  const showTons    = result.weightLbs >= 2000;
+  const rig         = isMachinery ? rigInfo(result.weightLbs) : null;
+  const crewCount   = result.crew || 1;
+  const crewLabel   = crewCount===1 ? '1 person can manage' : crewCount===2 ? '2 people needed' : '3+ people needed';
+  const crewHeavy   = crewCount >= 2;
+  const mainImg     = result.images?.[0];
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',background:'#111'}}>
@@ -520,19 +540,40 @@ function ScreenResults({ go, units, showConfidence, result }) {
           <div style={{background:'rgba(0,0,0,.72)',border:'1px solid rgba(255,255,255,.15)',borderRadius:5,padding:'3px 9px'}}>
             <span style={{color:'rgba(255,255,255,.8)',fontSize:12}}>D {D}</span>
           </div>
-          <div className="dim-chip" style={{background:'var(--blue-600)'}}>{WT}</div>
+          <div className="dim-chip" style={{background:'var(--blue-600)'}}>{WT}{showTons?` / ${weightTons}T`:''}</div>
         </div>
       </div>
 
       <div className="results-card">
-        {/* Crew badge */}
-        <div className="crew-badge" style={{background: crewHeavy?'var(--orange-50)':'var(--green-50)', borderColor: crewHeavy?'var(--orange-200)':'var(--green-200)'}}>
-          <div style={{fontSize:28,lineHeight:1}}>{'🧍'.repeat(Math.min(crewCount,2))}{crewCount>2?'+':''}</div>
-          <div>
-            <div style={{fontWeight:700,fontSize:14,color: crewHeavy?'var(--orange-800)':'var(--green-800)'}}>{crewLabel}</div>
-            <div style={{fontSize:12,color:'var(--gray-600)'}}>As selected by you</div>
+        {/* Crew / Rigging badge */}
+        {isMachinery ? (
+          <div className="crew-badge" style={{background: rig.heavy?'var(--orange-50)':'var(--green-50)', borderColor: rig.heavy?'var(--orange-200)':'var(--green-200)'}}>
+            <div style={{fontSize:28,lineHeight:1}}>{rig.icon}</div>
+            <div>
+              <div style={{fontWeight:700,fontSize:14,color: rig.heavy?'var(--orange-800)':'var(--green-800)'}}>{rig.label}</div>
+              <div style={{fontSize:12,color:'var(--gray-600)'}}>Based on ~{showTons?`${weightTons} tons`:`${result.weightLbs} lbs`}</div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="crew-badge" style={{background: crewHeavy?'var(--orange-50)':'var(--green-50)', borderColor: crewHeavy?'var(--orange-200)':'var(--green-200)'}}>
+            <div style={{fontSize:28,lineHeight:1}}>{'🧍'.repeat(Math.min(crewCount,2))}{crewCount>2?'+':''}</div>
+            <div>
+              <div style={{fontWeight:700,fontSize:14,color: crewHeavy?'var(--orange-800)':'var(--green-800)'}}>{crewLabel}</div>
+              <div style={{fontSize:12,color:'var(--gray-600)'}}>As selected by you</div>
+            </div>
+          </div>
+        )}
+
+        {/* Trailer type — machinery only */}
+        {isMachinery && result.trailerType && (
+          <div style={{display:'flex',alignItems:'center',gap:10,background:'var(--gray-100)',borderRadius:8,padding:'10px 14px',marginBottom:14}}>
+            <span style={{fontSize:20}}>🚛</span>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px'}}>Recommended Trailer</div>
+              <div style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>{TRAILER_LABELS[result.trailerType] || result.trailerType}</div>
+            </div>
+          </div>
+        )}
 
         {showConfidence && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>

@@ -13,7 +13,6 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 app.post('/analyze', async (req, res) => {
   const { images, image, materials, material, materialDensity } = req.body;
 
-  // Accept either multi-photo `images` array or legacy single `image`
   const photoList = images?.length ? images : image ? [image] : [];
   if (!photoList.length) return res.status(400).json({ error: 'No image provided' });
 
@@ -26,7 +25,7 @@ app.post('/analyze', async (req, res) => {
   const matList = materials?.length ? materials : (material ? [material] : []);
   const knownMats = matList.filter(m => m !== 'Unknown' && m !== 'Not Sure');
   const materialHint = knownMats.length
-    ? `\nThe user identified the material(s) as: ${knownMats.join(' + ')}${materialDensity ? ` (blended density ≈ ${materialDensity} lbs/cu ft — use this for your weight calculation)` : ''}. Account for heavier materials like marble or metal dominating the weight.`
+    ? `\nThe user identified the material(s) as: ${knownMats.join(' + ')}${materialDensity ? ` (blended density ≈ ${materialDensity} lbs/cu ft)` : ''}. Account for heavier materials dominating the weight.`
     : '';
 
   const photoNote = photoList.length > 1
@@ -43,32 +42,48 @@ app.post('/analyze', async (req, res) => {
           ...imageBlocks,
           {
             type: 'text',
-            text: `You are a furniture measurement expert helping shippers get accurate size and weight estimates.${photoNote}${materialHint}
+            text: `You are a shipping and logistics expert who analyzes images to identify items and provide accurate size, weight, and handling estimates for carriers.${photoNote}${materialHint}
 
-Analyze these image(s) carefully using every visual clue available:
-- If a coin is visible, use it as a scale reference (a US quarter is 0.955" diameter)
-- If a banana is visible, use it as a scale reference (a typical banana is 7-8" long)
-- If a standard water bottle is visible, use it as a scale reference (typically 10-11" tall)
-- If a hand or foot is visible, use it as a scale reference (average hand span ~7-8", foot ~10")
-- Use standard room features for scale: doorways are typically 80" tall and 32-36" wide, ceiling heights are typically 96-108", electrical outlets are 4.5" tall, light switches are 4.5" tall
-- Use the furniture's own proportions — drawer heights, cushion depths, leg heights all have standard sizes
-- Look at flooring tiles/planks, baseboards, and wall features for additional scale
-- Cross-check your estimates: does the weight make sense for the material and size?${materialDensity ? ` Use ${materialDensity} lbs/cu ft for this item.` : ' (solid wood = ~45 lbs/cu ft, upholstered = ~22 lbs/cu ft, particleboard = ~35 lbs/cu ft, metal = ~90 lbs/cu ft, marble/stone = ~160 lbs/cu ft)'}
+STEP 1 — Classify the item:
+- "furniture": household or office items (sofas, dressers, tables, chairs, appliances, etc.)
+- "machinery": industrial or commercial equipment (construction machines, generators, engines, forklifts, farm equipment, vehicles, compressors, pumps, etc.)
+
+STEP 2 — Use every visual clue for scale:
+- Coin (US quarter = 0.955" diameter), banana (7-8" long), water bottle (10-11" tall)
+- Hand span ~7-8", foot ~10"
+- Doorways ~80" tall, 32-36" wide; ceiling ~96-108"; outlets/switches ~4.5" tall
+- For machinery: tires, cab windows, hydraulic cylinders, and standard component sizes
+- Furniture proportions: drawer heights, cushion depths, leg heights
+
+STEP 3 — Estimate dimensions and weight:
+- Dimensions always in inches
+- Weight in lbs (machinery can be thousands or tens of thousands)${materialDensity ? `\n- Use ${materialDensity} lbs/cu ft for weight calculation` : `
+- Density references: solid wood ~45, upholstered ~22, particleboard ~35, metal ~90, marble ~160, cast iron ~450 lbs/cu ft
+- Machinery references: compact skid steer ~6,000 lbs, full excavator ~40,000 lbs, large generator ~2,000-10,000 lbs`}
+
+STEP 4 — For machinery, recommend the appropriate trailer:
+- "standard": cargo vans, small equipment under 3,000 lbs
+- "flatbed": most machinery, wide/tall items
+- "lowboy": tall machinery (excavators, cranes) that won't clear a standard flatbed
+- "RGN": extremely heavy or oversized machinery requiring detachable neck
+- "enclosed": sensitive equipment needing weather protection
 
 Respond with ONLY valid JSON, no markdown, no code fences:
 {
-  "itemType": "specific name of the furniture item",
+  "itemCategory": "furniture" or "machinery",
+  "itemType": "specific name of the item",
   "width": <width in inches as a number>,
   "height": <height in inches as a number>,
   "depth": <depth in inches as a number>,
   "weightLbs": <estimated weight in lbs as a number>,
   "confidence": <confidence 0-100 as a number>,
   "fragility": "Low | Medium | High",
-  "handlingNotes": "one practical sentence of handling advice for shippers",
+  "handlingNotes": "one practical sentence of handling advice for the carrier",
+  "trailerType": "standard | flatbed | lowboy | RGN | enclosed",
   "tags": ["tag1", "tag2", "tag3"]
 }
-If you cannot identify furniture in the image, return:
-{"error": "No furniture detected"}`
+If you cannot identify the item, return:
+{"error": "No item detected"}`
           }
         ]
       }]
