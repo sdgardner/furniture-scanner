@@ -57,6 +57,11 @@
     @keyframes fadeUp { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:translateY(0); } }
     .shimmer-wrap { position: relative; overflow: hidden; }
     .shimmer-wrap::after { content:''; position:absolute; inset:0; width:40%; background: linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); animation: shimmer 1.5s infinite; }
+
+    /* Detection bar + checkmark */
+    @keyframes detect-slide { 0% { transform: translateX(-200%); } 100% { transform: translateX(350%); } }
+    @keyframes check-pop { 0% { transform: scale(0); opacity:0; } 65% { transform: scale(1.25); opacity:1; } 100% { transform: scale(1); opacity:1; } }
+    @keyframes check-draw { to { stroke-dashoffset: 0; } }
     .proc-step { animation: fadeUp 280ms ease both; }
 
     /* Tile selector */
@@ -391,11 +396,38 @@ function ScreenMaterial({ go, detecting, category, setCategory, materials, setMa
       <StepBar current={1} />
       <div style={{flex:1,padding:'20px 16px',overflow:'auto'}}>
 
+        {/* Detection banner */}
+        {(detecting || category) && (
+          <div style={{marginBottom:16,borderRadius:8,border:`1px solid ${detecting?'var(--blue-200)':'var(--green-200)'}`,background:detecting?'var(--blue-50)':'var(--green-50)',padding:'12px 14px',transition:'background 300ms'}}>
+            {detecting ? (
+              <>
+                <div style={{fontSize:13,fontWeight:600,color:'var(--blue-700)',marginBottom:8}}>Identifying item…</div>
+                <div style={{height:4,borderRadius:2,background:'var(--blue-100)',overflow:'hidden'}}>
+                  <div style={{height:'100%',width:'40%',background:'var(--blue-500)',borderRadius:2,animation:'detect-slide 1.1s ease-in-out infinite'}} />
+                </div>
+              </>
+            ) : (
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <div style={{width:26,height:26,borderRadius:'50%',background:'var(--action-primary)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,animation:'check-pop 0.45s cubic-bezier(.34,1.56,.64,1) both'}}>
+                  <svg width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+                    style={{strokeDasharray:20,strokeDashoffset:20,animation:'check-draw 0.3s 0.2s ease forwards'}}>
+                    <path d="M2 7l3.5 3.5L12 3" />
+                  </svg>
+                </div>
+                <div>
+                  <div style={{fontSize:11,fontWeight:700,color:'var(--green-700)',textTransform:'uppercase',letterSpacing:'.4px'}}>Auto-detected</div>
+                  <div style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>{category==='machinery'?'🚜 Machinery':'🛋️ Furniture & Household'}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Category picker */}
         <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
-          <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',textTransform:'uppercase',letterSpacing:'.4px',margin:0}}>What are you scanning?</p>
-          {detecting && <span style={{fontSize:12,color:'var(--blue-600)',fontWeight:600}}>Detecting…</span>}
-          {!detecting && category && <span style={{fontSize:12,color:'var(--green-700)',fontWeight:600}}>✓ Auto-detected</span>}
+          <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',textTransform:'uppercase',letterSpacing:'.4px',margin:0}}>
+            {category ? 'Not right? Change it:' : 'What are you scanning?'}
+          </p>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:24}}>
           {[{id:'furniture',icon:'🛋️',label:'Furniture',sub:'Household & office'},{id:'machinery',icon:'🚜',label:'Machinery',sub:'Equipment & industrial'}].map(c=>{
