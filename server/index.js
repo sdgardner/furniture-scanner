@@ -20,22 +20,23 @@ app.post('/detect', async (req, res) => {
 
   try {
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 10,
+      model: 'claude-sonnet-4-6',
+      max_tokens: 20,
       messages: [{
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-          { type: 'text', text: 'Is this image showing "furniture" (household/office items) or "machinery" (equipment, vehicles, industrial machines)? Reply with exactly one word: furniture or machinery.' }
+          { type: 'text', text: 'Is this "furniture" (household/office items like sofas, tables, dressers) or "machinery" (equipment, vehicles, industrial machines like excavators, generators, forklifts)? Reply with exactly one word: furniture or machinery.' }
         ]
       }]
     });
     const text = response.content[0].text.trim().toLowerCase();
     const category = text.includes('machin') ? 'machinery' : 'furniture';
+    console.log('Detected category:', category, '| raw:', text);
     res.json({ category });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Detection failed' });
+    console.error('Detect error:', err.message);
+    res.status(500).json({ error: 'Detection failed', detail: err.message });
   }
 });
 

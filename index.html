@@ -762,9 +762,9 @@ function App() {
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ image: images[0] }),
       })
-        .then(r => r.json())
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(data => { if (data.category) setCategory(data.category); })
-        .catch(() => {})
+        .catch(err => { console.error('Detection failed:', err); })
         .finally(() => setDetecting(false));
     }
   }, [screen]);
