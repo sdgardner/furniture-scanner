@@ -87,9 +87,10 @@ STEP 2 — Use every visual clue for scale:
 
 STEP 3 — Estimate dimensions and weight:
 - Dimensions always in inches
-- Weight in lbs (machinery can be thousands or tens of thousands)${materialDensity ? `\n- Use ${materialDensity} lbs/cu ft for weight calculation` : `
+- **IMPORTANT: If you identified the brand and model number, use the manufacturer's published specifications for that exact model — do NOT visually estimate. For example, a CAT 305E mini excavator has published specs: operating weight ~11,464 lbs, width ~66 inches, height ~98 inches, length ~196 inches with boom lowered. Always prefer known specs over visual guessing.**
+- If model is unknown, use visual clues and these density references:${materialDensity ? `\n- Use ${materialDensity} lbs/cu ft for weight calculation` : `
 - Density references: solid wood ~45, upholstered ~22, particleboard ~35, metal ~90, marble ~160, cast iron ~450 lbs/cu ft
-- Machinery references: compact skid steer ~6,000 lbs, full excavator ~40,000 lbs, large generator ~2,000-10,000 lbs`}
+- Machinery weight references: CAT 305E mini excavator ~11,500 lbs, compact skid steer ~6,000 lbs, full excavator (CAT 320) ~48,000 lbs, large generator ~2,000–10,000 lbs`}
 
 STEP 4 — For machinery, recommend the appropriate trailer:
 - "standard": small equipment under 3,000 lbs, fits in a cargo van or pickup
@@ -102,17 +103,18 @@ Respond with ONLY valid JSON, no markdown, no code fences:
 {
   "itemCategory": "furniture" or "machinery",
   "itemType": "specific name of the item",
-  "modelNumber": "model number/name if visible on the item (e.g. '305E', 'D6T', '320GC') or null",
-  "manufacturerYear": <estimated manufacture year as a number, or null if not determinable — for machinery, use visible serial number plates, design generation, or cab style to estimate>,
+  "brand": "manufacturer brand name if identifiable (e.g. 'Caterpillar', 'John Deere', 'Kubota', 'Bobcat') or null",
+  "modelNumber": "model number/name if visible (e.g. '305E', 'D6T', '320GC') or null",
+  "manufacturerYear": <estimated manufacture year as a number, or null — use serial plates, cab design generation, or color scheme to estimate>,
   "width": <width in inches as a number>,
   "height": <height in inches as a number>,
   "depth": <depth in inches as a number>,
-  "weightLbs": <estimated weight in lbs as a number — if you identified the model number, use the known published operating weight for that model>,
+  "weightLbs": <weight in lbs — use published operating weight if model is known, otherwise estimate>,
   "confidence": <confidence 0-100 as a number>,
   "fragility": "Low | Medium | High",
   "handlingNotes": "one practical sentence of handling advice for the carrier",
   "trailerType": "standard | flatbed | lowboy | RGN | enclosed",
-  "tags": ["tag1", "tag2", "tag3"]
+  "tags": ["include brand name if known", "include model number if known", "include estimated year if known", "plus any other relevant tags"]
 }
 If you cannot identify the item, return:
 {"error": "No item detected"}`

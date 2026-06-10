@@ -579,8 +579,13 @@ function ScreenResults({ go, units, showConfidence, result }) {
     <div style={{flex:1,display:'flex',flexDirection:'column',background:'#111'}}>
       <div style={{height:52,flexShrink:0,background:'rgba(0,0,0,.75)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',padding:'0 8px',gap:8}}>
         <button className="skid-btn skid-btn--ghost skid-btn--sm" style={{width:36,height:36,padding:0,color:'#fff'}} onClick={()=>go(1)}><IcoBack /></button>
-        <span style={{fontWeight:700,fontSize:16,color:'#fff',flex:1}}>Scan Results</span>
-        <span className="skid-badge skid-badge--blue skid-badge--solid skid-badge--sm">{result.itemType}</span>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:700,fontSize:15,color:'#fff',lineHeight:1.2}}>
+            {result.brand ? `${result.brand} ` : ''}{result.modelNumber || result.itemType}
+          </div>
+          {result.brand && result.modelNumber && <div style={{fontSize:12,color:'rgba(255,255,255,.6)'}}>{result.itemType}</div>}
+        </div>
+        {result.manufacturerYear && <span className="skid-badge skid-badge--blue skid-badge--solid skid-badge--sm">{result.manufacturerYear}</span>}
       </div>
 
       {/* Photo(s) */}
@@ -631,19 +636,25 @@ function ScreenResults({ go, units, showConfidence, result }) {
           </div>
         )}
 
-        {/* Machinery: model number + year */}
-        {isMachinery && (result.modelNumber || result.manufacturerYear) && (
+        {/* Machinery: brand / model / year chips */}
+        {isMachinery && (result.brand || result.modelNumber || result.manufacturerYear) && (
           <div style={{display:'flex',gap:8,marginBottom:14}}>
+            {result.brand && (
+              <div style={{flex:1,background:'var(--gray-100)',borderRadius:8,padding:'10px 12px'}}>
+                <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px',marginBottom:2}}>Brand</div>
+                <div style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>{result.brand}</div>
+              </div>
+            )}
             {result.modelNumber && (
               <div style={{flex:1,background:'var(--gray-100)',borderRadius:8,padding:'10px 12px'}}>
                 <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px',marginBottom:2}}>Model</div>
-                <div style={{fontSize:16,fontWeight:700,color:'var(--gray-800)'}}>{result.modelNumber}</div>
+                <div style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>{result.modelNumber}</div>
               </div>
             )}
             {result.manufacturerYear && (
               <div style={{flex:1,background:'var(--gray-100)',borderRadius:8,padding:'10px 12px'}}>
                 <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px',marginBottom:2}}>Est. Year</div>
-                <div style={{fontSize:16,fontWeight:700,color:'var(--gray-800)'}}>{result.manufacturerYear}</div>
+                <div style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>{result.manufacturerYear}</div>
               </div>
             )}
           </div>
