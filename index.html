@@ -631,6 +631,24 @@ function ScreenResults({ go, units, showConfidence, result }) {
           </div>
         )}
 
+        {/* Machinery: model number + year */}
+        {isMachinery && (result.modelNumber || result.manufacturerYear) && (
+          <div style={{display:'flex',gap:8,marginBottom:14}}>
+            {result.modelNumber && (
+              <div style={{flex:1,background:'var(--gray-100)',borderRadius:8,padding:'10px 12px'}}>
+                <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px',marginBottom:2}}>Model</div>
+                <div style={{fontSize:16,fontWeight:700,color:'var(--gray-800)'}}>{result.modelNumber}</div>
+              </div>
+            )}
+            {result.manufacturerYear && (
+              <div style={{flex:1,background:'var(--gray-100)',borderRadius:8,padding:'10px 12px'}}>
+                <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px',marginBottom:2}}>Est. Year</div>
+                <div style={{fontSize:16,fontWeight:700,color:'var(--gray-800)'}}>{result.manufacturerYear}</div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Machinery: trailer + condition */}
         {isMachinery && (result.trailerType || result.condition) && (
           <div style={{display:'flex',gap:8,marginBottom:14}}>

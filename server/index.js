@@ -102,10 +102,12 @@ Respond with ONLY valid JSON, no markdown, no code fences:
 {
   "itemCategory": "furniture" or "machinery",
   "itemType": "specific name of the item",
+  "modelNumber": "model number/name if visible on the item (e.g. '305E', 'D6T', '320GC') or null",
+  "manufacturerYear": <estimated manufacture year as a number, or null if not determinable — for machinery, use visible serial number plates, design generation, or cab style to estimate>,
   "width": <width in inches as a number>,
   "height": <height in inches as a number>,
   "depth": <depth in inches as a number>,
-  "weightLbs": <estimated weight in lbs as a number>,
+  "weightLbs": <estimated weight in lbs as a number — if you identified the model number, use the known published operating weight for that model>,
   "confidence": <confidence 0-100 as a number>,
   "fragility": "Low | Medium | High",
   "handlingNotes": "one practical sentence of handling advice for the carrier",
