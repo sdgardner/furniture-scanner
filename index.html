@@ -778,15 +778,17 @@ function App() {
   useEffect(() => {
     if (screen === 2 && !category && images.length) {
       setDetecting(true);
-      fetch(`${API_URL}/detect`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ image: images[0] }),
-      })
-        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(data => { if (data.category) setCategory(data.category); })
-        .catch(err => { console.error('Detection failed:', err); })
-        .finally(() => setDetecting(false));
+      compressImage(images[0], 400, 0.6).then(thumb =>
+        fetch(`${API_URL}/detect`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ image: thumb }),
+        })
+          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(data => { if (data.category) setCategory(data.category); })
+          .catch(err => { console.error('Detection failed:', err); })
+          .finally(() => setDetecting(false))
+      );
     }
   }, [screen]);
 
