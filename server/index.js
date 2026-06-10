@@ -11,7 +11,7 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.post('/analyze', async (req, res) => {
-  const { images, image, materials, material, materialDensity } = req.body;
+  const { images, image, category, materials, material, materialDensity, condition } = req.body;
 
   const photoList = images?.length ? images : image ? [image] : [];
   if (!photoList.length) return res.status(400).json({ error: 'No image provided' });
@@ -44,9 +44,9 @@ app.post('/analyze', async (req, res) => {
             type: 'text',
             text: `You are a shipping and logistics expert who analyzes images to identify items and provide accurate size, weight, and handling estimates for carriers.${photoNote}${materialHint}
 
-STEP 1 — Classify the item:
+STEP 1 — Classify the item:${category ? `\nThe user has already told you this is: "${category}" — use this as a strong hint and set itemCategory accordingly.` : `
 - "furniture": household or office items (sofas, dressers, tables, chairs, appliances, etc.)
-- "machinery": industrial or commercial equipment (construction machines, generators, engines, forklifts, farm equipment, vehicles, compressors, pumps, etc.)
+- "machinery": industrial or commercial equipment (construction machines, generators, engines, forklifts, farm equipment, vehicles, compressors, pumps, etc.)`}${condition ? `\nThe user noted the machinery condition is: ${condition}.` : ''}
 
 STEP 2 — Use every visual clue for scale:
 - Coin (US quarter = 0.955" diameter), banana (7-8" long), water bottle (10-11" tall)

@@ -335,16 +335,31 @@ const MATERIALS = [
 ];
 
 const CREW_OPTIONS = [
-  { n: 1, icon: '🧍', label: '1 person' },
-  { n: 2, icon: '🧍🧍', label: '2 people' },
-  { n: 3, icon: '🧍🧍🧍', label: '3+ people' },
+  { n: 1, icon: '🧍',     label: '1 person'   },
+  { n: 2, icon: '🧍🧍',   label: '2 people'   },
+  { n: 3, icon: '🧍🧍🧍', label: '3+ people'  },
 ];
 
-function ScreenMaterial({ go, materials, setMaterials, crew, setCrew }) {
+const MACHINERY_MATERIALS = [
+  { id:'castiron', icon:'⚙️', label:'Cast Iron / Steel', sub:'Machinery, engines, frames', lbsPerCuFt: 450 },
+  { id:'metal',    icon:'🔩', label:'Metal / Aluminum',  sub:'Light equipment, frames',   lbsPerCuFt: 90  },
+  { id:'unknown',  icon:'❓', label:'Not Sure',           sub:'Let AI decide',              lbsPerCuFt: null },
+];
+
+const CONDITION_OPTIONS = [
+  { id:'operational',     icon:'✅', label:'Operational',     sub:'Runs / drives on its own' },
+  { id:'non-operational', icon:'🔴', label:'Non-Operational', sub:'Needs crane or forklift'  },
+];
+
+function ScreenMaterial({ go, category, setCategory, materials, setMaterials, crew, setCrew, condition, setCondition }) {
   const toggle = (id) => setMaterials(prev =>
     prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id]
   );
-  const canProceed = crew !== null;
+
+  const isFurniture = category === 'furniture';
+  const isMachinery = category === 'machinery';
+  const matOptions  = isMachinery ? MACHINERY_MATERIALS : MATERIALS;
+  const canProceed  = isMachinery ? (condition !== null) : (isFurniture && crew !== null);
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',background:'var(--gray-50)'}}>
@@ -355,42 +370,69 @@ function ScreenMaterial({ go, materials, setMaterials, crew, setCrew }) {
       <StepBar current={1} />
       <div style={{flex:1,padding:'20px 16px',overflow:'auto'}}>
 
-        {/* Material */}
-        <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.4px'}}>What's it made of? <span style={{fontWeight:400,color:'var(--gray-500)',textTransform:'none',letterSpacing:0}}>(select all that apply)</span></p>
-        <div className="material-grid" style={{marginBottom:24}}>
-          {MATERIALS.map(m=>{
-            const sel = materials.includes(m.id);
+        {/* Category picker */}
+        <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.4px'}}>What are you scanning?</p>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:24}}>
+          {[{id:'furniture',icon:'🛋️',label:'Furniture',sub:'Household & office'},{id:'machinery',icon:'🚜',label:'Machinery',sub:'Equipment & industrial'}].map(c=>{
+            const sel = category===c.id;
             return (
-              <div key={m.id} className={`material-tile${sel?' selected':''}`} style={{position:'relative'}} onClick={()=>toggle(m.id)}>
-                {sel && (
-                  <div style={{position:'absolute',top:6,right:6,width:18,height:18,borderRadius:'50%',background:'var(--blue-600)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                    <IcoCheck />
-                  </div>
-                )}
-                <div className="material-tile__icon">{m.icon}</div>
-                <div>
-                  <div className="material-tile__label">{m.label}</div>
-                  <div className="material-tile__sub">{m.sub}</div>
-                </div>
+              <div key={c.id} className={`material-tile${sel?' selected':''}`} style={{position:'relative',padding:'16px 12px'}}
+                onClick={()=>{ setCategory(c.id); setMaterials([]); setCrew(null); setCondition(null); }}>
+                {sel && <div style={{position:'absolute',top:6,right:6,width:18,height:18,borderRadius:'50%',background:'var(--blue-600)',display:'flex',alignItems:'center',justifyContent:'center'}}><IcoCheck /></div>}
+                <div style={{fontSize:30}}>{c.icon}</div>
+                <div><div className="material-tile__label">{c.label}</div><div className="material-tile__sub">{c.sub}</div></div>
               </div>
             );
           })}
         </div>
 
-        {/* Crew */}
-        <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.4px'}}>How many people to move it?</p>
-        <div style={{display:'flex',gap:8,marginBottom:8}}>
-          {CREW_OPTIONS.map(({n,icon,label})=>{
-            const sel = crew===n;
-            return (
-              <div key={n} className={`material-tile${sel?' selected':''}`} style={{flex:1,padding:'12px 6px'}} onClick={()=>setCrew(n)}>
+        {/* Material — shown after category selected */}
+        {category && <>
+          <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.4px'}}>
+            What's it made of? <span style={{fontWeight:400,color:'var(--gray-500)',textTransform:'none',letterSpacing:0}}>(select all that apply)</span>
+          </p>
+          <div className="material-grid" style={{marginBottom:24}}>
+            {matOptions.map(m=>{
+              const sel = materials.includes(m.id);
+              return (
+                <div key={m.id} className={`material-tile${sel?' selected':''}`} style={{position:'relative'}} onClick={()=>toggle(m.id)}>
+                  {sel && <div style={{position:'absolute',top:6,right:6,width:18,height:18,borderRadius:'50%',background:'var(--blue-600)',display:'flex',alignItems:'center',justifyContent:'center'}}><IcoCheck /></div>}
+                  <div className="material-tile__icon">{m.icon}</div>
+                  <div><div className="material-tile__label">{m.label}</div><div className="material-tile__sub">{m.sub}</div></div>
+                </div>
+              );
+            })}
+          </div>
+        </>}
+
+        {/* Furniture: crew count */}
+        {isFurniture && <>
+          <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.4px'}}>How many people to move it?</p>
+          <div style={{display:'flex',gap:8,marginBottom:8}}>
+            {CREW_OPTIONS.map(({n,icon,label})=>(
+              <div key={n} className={`material-tile${crew===n?' selected':''}`} style={{flex:1,padding:'12px 6px'}} onClick={()=>setCrew(n)}>
                 <div style={{fontSize:20,lineHeight:1}}>{icon}</div>
                 <div className="material-tile__label" style={{fontSize:12,marginTop:2}}>{label}</div>
               </div>
-            );
-          })}
-        </div>
-        {!crew && <p style={{fontSize:12,color:'var(--gray-500)',marginTop:4}}>Required — select how many movers needed.</p>}
+            ))}
+          </div>
+          {!crew && <p style={{fontSize:12,color:'var(--gray-500)',marginTop:4}}>Required — select how many movers needed.</p>}
+        </>}
+
+        {/* Machinery: condition */}
+        {isMachinery && <>
+          <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.4px'}}>Condition?</p>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:8}}>
+            {CONDITION_OPTIONS.map(c=>(
+              <div key={c.id} className={`material-tile${condition===c.id?' selected':''}`} style={{position:'relative'}} onClick={()=>setCondition(c.id)}>
+                {condition===c.id && <div style={{position:'absolute',top:6,right:6,width:18,height:18,borderRadius:'50%',background:'var(--blue-600)',display:'flex',alignItems:'center',justifyContent:'center'}}><IcoCheck /></div>}
+                <div style={{fontSize:26}}>{c.icon}</div>
+                <div><div className="material-tile__label">{c.label}</div><div className="material-tile__sub">{c.sub}</div></div>
+              </div>
+            ))}
+          </div>
+          {!condition && <p style={{fontSize:12,color:'var(--gray-500)',marginTop:4}}>Required — helps carriers plan the right equipment.</p>}
+        </>}
 
       </div>
       <div style={{padding:'12px 16px',background:'var(--gray-0)',borderTop:'1px solid var(--gray-200)'}}>
@@ -403,7 +445,7 @@ function ScreenMaterial({ go, materials, setMaterials, crew, setCrew }) {
 }
 
 /* ── SCREEN 3 · PROCESSING ──────────────────────────────────────────────── */
-function ScreenProcessing({ go, active, images, materials, crew, onResult }) {
+function ScreenProcessing({ go, active, images, category, materials, crew, condition, onResult }) {
   const [step, setStep] = useState(0);
   const [error, setError] = useState(null);
   const steps = ['Photos received','Detecting item type','Measuring dimensions','Estimating weight'];
@@ -422,13 +464,13 @@ function ScreenProcessing({ go, active, images, materials, crew, onResult }) {
     fetch(`${API_URL}/analyze`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ images, materials: matLabels, materialDensity: avgDensity }),
+      body:JSON.stringify({ images, category, materials: matLabels, materialDensity: avgDensity, condition }),
     })
       .then(r=>r.json())
       .then(data=>{
         clearInterval(advance); setStep(steps.length-1);
         if(data.error){ setError(data.error); return; }
-        setTimeout(()=>{ onResult({...data,images,materials,crew,date:'Just now'}); go(4); },600);
+        setTimeout(()=>{ onResult({...data,images,category,materials,crew,condition,date:'Just now'}); go(4); },600);
       })
       .catch(()=>{ clearInterval(advance); setError('Could not reach the server. Please try again.'); });
     return ()=>clearInterval(advance);
@@ -564,14 +606,27 @@ function ScreenResults({ go, units, showConfidence, result }) {
           </div>
         )}
 
-        {/* Trailer type — machinery only */}
-        {isMachinery && result.trailerType && (
-          <div style={{display:'flex',alignItems:'center',gap:10,background:'var(--gray-100)',borderRadius:8,padding:'10px 14px',marginBottom:14}}>
-            <span style={{fontSize:20}}>🚛</span>
-            <div>
-              <div style={{fontSize:12,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px'}}>Recommended Trailer</div>
-              <div style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>{TRAILER_LABELS[result.trailerType] || result.trailerType}</div>
-            </div>
+        {/* Machinery: trailer + condition */}
+        {isMachinery && (result.trailerType || result.condition) && (
+          <div style={{display:'flex',gap:8,marginBottom:14}}>
+            {result.trailerType && (
+              <div style={{flex:1,display:'flex',alignItems:'center',gap:8,background:'var(--gray-100)',borderRadius:8,padding:'10px 12px'}}>
+                <span style={{fontSize:18}}>🚛</span>
+                <div>
+                  <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px'}}>Trailer</div>
+                  <div style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>{TRAILER_LABELS[result.trailerType] || result.trailerType}</div>
+                </div>
+              </div>
+            )}
+            {result.condition && (
+              <div style={{flex:1,display:'flex',alignItems:'center',gap:8,background: result.condition==='operational'?'var(--green-50)':'var(--orange-50)',borderRadius:8,padding:'10px 12px',border:`1px solid ${result.condition==='operational'?'var(--green-200)':'var(--orange-200)'}`}}>
+                <span style={{fontSize:18}}>{result.condition==='operational'?'✅':'🔴'}</span>
+                <div>
+                  <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px'}}>Condition</div>
+                  <div style={{fontSize:13,fontWeight:700,color: result.condition==='operational'?'var(--green-800)':'var(--orange-800)'}}>{result.condition==='operational'?'Operational':'Non-Operational'}</div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -673,9 +728,11 @@ function ScreenNextSteps({ go, result }) {
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [screen, setScreen] = useState(0);
-  const [images, setImages]     = useState([]);
+  const [images, setImages]       = useState([]);
+  const [category, setCategory]   = useState(null);
   const [materials, setMaterials] = useState([]);
-  const [crew, setCrew]         = useState(null);
+  const [crew, setCrew]           = useState(null);
+  const [condition, setCondition] = useState(null);
   const [result, setResult]     = useState(null);
   const [scans, setScans]       = useState([]);
 
@@ -692,7 +749,7 @@ function App() {
   };
 
   // Reset when going back to home
-  useEffect(()=>{ if(screen===0){ setImages([]); setMaterials([]); setCrew(null); } },[screen]);
+  useEffect(()=>{ if(screen===0){ setImages([]); setCategory(null); setMaterials([]); setCrew(null); setCondition(null); } },[screen]);
 
   return (
     <>
@@ -701,8 +758,8 @@ function App() {
           {[
             <ScreenHome go={go} scans={scans} />,
             <ScreenCapture go={go} active={screen===1} images={images} setImages={setImages} />,
-            <ScreenMaterial go={go} materials={materials} setMaterials={setMaterials} crew={crew} setCrew={setCrew} />,
-            <ScreenProcessing go={go} active={screen===3} images={images} materials={materials} crew={crew} onResult={onResult} />,
+            <ScreenMaterial go={go} category={category} setCategory={setCategory} materials={materials} setMaterials={setMaterials} crew={crew} setCrew={setCrew} condition={condition} setCondition={setCondition} />,
+            <ScreenProcessing go={go} active={screen===3} images={images} category={category} materials={materials} crew={crew} condition={condition} onResult={onResult} />,
             <ScreenResults go={go} units={t.units} showConfidence={t.showConfidence} result={result} />,
             <ScreenNextSteps go={go} result={result} />,
           ].map((s,i)=>(
