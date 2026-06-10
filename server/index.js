@@ -92,11 +92,11 @@ STEP 3 — Estimate dimensions and weight:
 - Machinery references: compact skid steer ~6,000 lbs, full excavator ~40,000 lbs, large generator ~2,000-10,000 lbs`}
 
 STEP 4 — For machinery, recommend the appropriate trailer:
-- "standard": cargo vans, small equipment under 3,000 lbs
-- "flatbed": most machinery, wide/tall items
-- "lowboy": tall machinery (excavators, cranes) that won't clear a standard flatbed
-- "RGN": extremely heavy or oversized machinery requiring detachable neck
-- "enclosed": sensitive equipment needing weather protection
+- "standard": small equipment under 3,000 lbs, fits in a cargo van or pickup
+- "enclosed": sensitive or weather-sensitive equipment needing full protection
+- "flatbed": the default for most construction equipment — mini excavators, skid steers, small bulldozers, forklifts, generators, tractors, anything that fits within standard height/width limits (under ~8.5 ft tall loaded, under 48,000 lbs)
+- "lowboy": ONLY for full-size heavy equipment that is too tall for a standard flatbed — large excavators (CAT 320 and up, 20+ tons), large cranes, large bulldozers (D6 and up). A mini excavator like a CAT 305E or 308 is a FLATBED, not a lowboy.
+- "RGN": extremely oversized or overweight loads over 48,000 lbs requiring a detachable neck for drive-on loading
 
 Respond with ONLY valid JSON, no markdown, no code fences:
 {
