@@ -123,6 +123,23 @@ const IcoWarn    = () => <Ico d={['M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 
 const IcoPlus    = () => <Ico d={['M12 5v14','M5 12h14']} size={20} stroke={2} />;
 
 /* ── HELPERS ────────────────────────────────────────────────────────────── */
+// Resize + compress to stay under Claude's 10MB image limit
+function compressImage(dataUrl, maxDim = 1600, quality = 0.75) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataUrl;
+  });
+}
+
 function crewInfo(weightLbs, itemType) {
   const bulky = /sofa|sectional|couch|armoire|wardrobe|piano|cabinet/i.test(itemType||'');
   if (weightLbs >= 100 || bulky) return { count: 2, label: '2+ people required', color: 'var(--orange-600)' };
@@ -200,7 +217,7 @@ function ScreenHome({ go, scans }) {
             <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>{
               const file=e.target.files[0]; if(!file) return;
               const reader=new FileReader();
-              reader.onload=ev=>go(1,[ev.target.result]);
+              reader.onload=ev=>compressImage(ev.target.result).then(compressed=>go(1,[compressed]));
               reader.readAsDataURL(file);
             }} />
           </label>
@@ -249,13 +266,17 @@ function ScreenCapture({ go, active, images, setImages }) {
     const canvas = document.createElement('canvas');
     canvas.width=video.videoWidth; canvas.height=video.videoHeight;
     canvas.getContext('2d').drawImage(video,0,0);
-    setImages(prev => [...prev, canvas.toDataURL('image/jpeg',0.85)]);
+    compressImage(canvas.toDataURL('image/jpeg', 0.9)).then(compressed =>
+      setImages(prev => [...prev, compressed])
+    );
   };
 
   const addFromLibrary = (e) => {
     const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => setImages(prev => [...prev, ev.target.result]);
+    reader.onload = ev => compressImage(ev.target.result).then(compressed =>
+      setImages(prev => [...prev, compressed])
+    );
     reader.readAsDataURL(file);
   };
 
