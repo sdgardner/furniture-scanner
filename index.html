@@ -534,7 +534,7 @@ function ScreenProcessing({ go, active, images, category, materials, crew, condi
           <>
             <div style={{width:'100%',maxWidth:320}}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
-                <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>Analyzing your furniture</span>
+                <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>Analyzing your {category==='machinery'?'machinery':'item'}</span>
                 <span style={{fontSize:14,fontWeight:700,color:'var(--blue-600)'}}>{pct}%</span>
               </div>
               <div className="skid-progress shimmer-wrap" style={{background:'var(--gray-300)'}}>
