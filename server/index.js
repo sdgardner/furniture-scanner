@@ -10,6 +10,35 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
+app.post('/detect', async (req, res) => {
+  const { images, image } = req.body;
+  const photoList = images?.length ? images : image ? [image] : [];
+  if (!photoList.length) return res.status(400).json({ error: 'No image' });
+
+  const base64 = photoList[0].replace(/^data:image\/\w+;base64,/, '');
+  const mediaType = photoList[0].match(/^data:(image\/\w+);base64,/)?.[1] || 'image/jpeg';
+
+  try {
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 10,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+          { type: 'text', text: 'Is this image showing "furniture" (household/office items) or "machinery" (equipment, vehicles, industrial machines)? Reply with exactly one word: furniture or machinery.' }
+        ]
+      }]
+    });
+    const text = response.content[0].text.trim().toLowerCase();
+    const category = text.includes('machin') ? 'machinery' : 'furniture';
+    res.json({ category });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Detection failed' });
+  }
+});
+
 app.post('/analyze', async (req, res) => {
   const { images, image, category, materials, material, materialDensity, condition } = req.body;
 

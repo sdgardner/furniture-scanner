@@ -351,7 +351,7 @@ const CONDITION_OPTIONS = [
   { id:'non-operational', icon:'🔴', label:'Non-Operational', sub:'Needs crane or forklift'  },
 ];
 
-function ScreenMaterial({ go, category, setCategory, materials, setMaterials, crew, setCrew, condition, setCondition }) {
+function ScreenMaterial({ go, detecting, category, setCategory, materials, setMaterials, crew, setCrew, condition, setCondition }) {
   const toggle = (id) => setMaterials(prev =>
     prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id]
   );
@@ -371,7 +371,11 @@ function ScreenMaterial({ go, category, setCategory, materials, setMaterials, cr
       <div style={{flex:1,padding:'20px 16px',overflow:'auto'}}>
 
         {/* Category picker */}
-        <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.4px'}}>What are you scanning?</p>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+          <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',textTransform:'uppercase',letterSpacing:'.4px',margin:0}}>What are you scanning?</p>
+          {detecting && <span style={{fontSize:12,color:'var(--blue-600)',fontWeight:600}}>Detecting…</span>}
+          {!detecting && category && <span style={{fontSize:12,color:'var(--green-700)',fontWeight:600}}>✓ Auto-detected</span>}
+        </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:24}}>
           {[{id:'furniture',icon:'🛋️',label:'Furniture',sub:'Household & office'},{id:'machinery',icon:'🚜',label:'Machinery',sub:'Equipment & industrial'}].map(c=>{
             const sel = category===c.id;
@@ -733,8 +737,9 @@ function App() {
   const [materials, setMaterials] = useState([]);
   const [crew, setCrew]           = useState(null);
   const [condition, setCondition] = useState(null);
-  const [result, setResult]     = useState(null);
-  const [scans, setScans]       = useState([]);
+  const [detecting, setDetecting] = useState(false);
+  const [result, setResult]       = useState(null);
+  const [scans, setScans]         = useState([]);
 
   const go = (n, imgs, mats, res) => {
     if (imgs !== undefined && imgs !== null) setImages(imgs);
@@ -748,8 +753,24 @@ function App() {
     setScans(prev=>[data,...prev].slice(0,10));
   };
 
+  // Auto-detect furniture vs machinery when screen 2 opens
+  useEffect(() => {
+    if (screen === 2 && !category && images.length) {
+      setDetecting(true);
+      fetch(`${API_URL}/detect`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ image: images[0] }),
+      })
+        .then(r => r.json())
+        .then(data => { if (data.category) setCategory(data.category); })
+        .catch(() => {})
+        .finally(() => setDetecting(false));
+    }
+  }, [screen]);
+
   // Reset when going back to home
-  useEffect(()=>{ if(screen===0){ setImages([]); setCategory(null); setMaterials([]); setCrew(null); setCondition(null); } },[screen]);
+  useEffect(()=>{ if(screen===0){ setImages([]); setCategory(null); setMaterials([]); setCrew(null); setCondition(null); setDetecting(false); } },[screen]);
 
   return (
     <>
@@ -758,7 +779,7 @@ function App() {
           {[
             <ScreenHome go={go} scans={scans} />,
             <ScreenCapture go={go} active={screen===1} images={images} setImages={setImages} />,
-            <ScreenMaterial go={go} category={category} setCategory={setCategory} materials={materials} setMaterials={setMaterials} crew={crew} setCrew={setCrew} condition={condition} setCondition={setCondition} />,
+            <ScreenMaterial go={go} detecting={detecting} category={category} setCategory={setCategory} materials={materials} setMaterials={setMaterials} crew={crew} setCrew={setCrew} condition={condition} setCondition={setCondition} />,
             <ScreenProcessing go={go} active={screen===3} images={images} category={category} materials={materials} crew={crew} condition={condition} onResult={onResult} />,
             <ScreenResults go={go} units={t.units} showConfidence={t.showConfidence} result={result} />,
             <ScreenNextSteps go={go} result={result} />,
