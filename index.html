@@ -98,12 +98,13 @@
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script type="text/babel" src="project/tweaks-panel.jsx"></script>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useLayoutEffect } = React;
 
 const API_URL = 'https://furniture-scanner-production.up.railway.app';
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{ "units": "in", "showConfidence": true }/*EDITMODE-END*/;
@@ -126,6 +127,34 @@ const IcoShare   = () => <Ico d={['<circle cx="18" cy="5" r="3"/>','<circle cx="
 const IcoChevron = () => <Ico d={['M9 18l6-6-6-6']} size={18} stroke={2} />;
 const IcoWarn    = () => <Ico d={['M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z','M12 9v4','M12 17h.01']} size={20} />;
 const IcoPlus    = () => <Ico d={['M12 5v14','M5 12h14']} size={20} stroke={2} />;
+
+/* ── LUCIDE ICON ─────────────────────────────────────────────────────────── */
+let _lucideIconsCache = null;
+function _getLucideIcons() {
+  if (!_lucideIconsCache && window.lucide) {
+    _lucideIconsCache = {};
+    Object.entries(window.lucide).forEach(([k,v]) => {
+      if (typeof v === 'function' && k.charCodeAt(0) >= 65 && k.charCodeAt(0) <= 90) _lucideIconsCache[k] = v;
+    });
+  }
+  return _lucideIconsCache || {};
+}
+function LIcon({ name, size=20 }) {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !window.lucide) return;
+    el.innerHTML = '';
+    const i = document.createElement('i');
+    i.setAttribute('data-lucide', name);
+    el.appendChild(i);
+    const icons = _getLucideIcons();
+    if (Object.keys(icons).length) window.lucide.createIcons({ icons });
+    const svg = el.querySelector('svg');
+    if (svg) { svg.setAttribute('width', size); svg.setAttribute('height', size); svg.style.display = 'block'; }
+  }, [name, size]);
+  return <span ref={ref} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:size,height:size,flexShrink:0,color:'currentColor'}} />;
+}
 
 /* ── HELPERS ────────────────────────────────────────────────────────────── */
 // Resize + compress to stay under Claude's 10MB image limit
@@ -153,10 +182,10 @@ function crewInfo(weightLbs, itemType) {
 }
 
 function rigInfo(weightLbs) {
-  if (weightLbs >= 40000) return { icon: '🏗️', label: 'Crane required',        heavy: true  };
-  if (weightLbs >= 10000) return { icon: '⛓️',  label: 'Rigging crew required', heavy: true  };
-  if (weightLbs >= 3000)  return { icon: '🚜',  label: 'Forklift required',     heavy: true  };
-  return                         { icon: '🔧',  label: 'Pallet jack capable',   heavy: false };
+  if (weightLbs >= 40000) return { icon: 'hard-hat', label: 'Crane required',        heavy: true  };
+  if (weightLbs >= 10000) return { icon: 'link-2',   label: 'Rigging crew required', heavy: true  };
+  if (weightLbs >= 3000)  return { icon: 'truck',    label: 'Forklift required',     heavy: true  };
+  return                         { icon: 'wrench',   label: 'Pallet jack capable',   heavy: false };
 }
 
 const TRAILER_LABELS = {
@@ -204,13 +233,13 @@ function ScreenHome({ go, scans }) {
         <p style={{fontSize:15,color:'var(--gray-600)',lineHeight:1.55,marginBottom:16}}>Instant weight, dimensions, and shipping estimates — for furniture and heavy machinery.</p>
         <div style={{background:'var(--blue-50)',border:'1px solid var(--blue-200)',borderRadius:8,padding:'12px 14px',marginBottom:18}}>
           <div style={{fontSize:12,fontWeight:700,color:'var(--blue-800)',marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
-            📏 Better accuracy tip
+            <LIcon name="ruler" size={14} /> Better accuracy tip
           </div>
           <p style={{fontSize:13,color:'var(--blue-900)',lineHeight:1.55,margin:0}}>
             Place an everyday object next to the item before scanning — a soda can, a standard hardcover book, or a water bottle all work great as size references. We'll use it to nail the measurements.
           </p>
-          <p style={{fontSize:12,color:'var(--blue-700)',marginTop:6,marginBottom:0,fontStyle:'italic'}}>
-            🍌 A banana also works. We don't judge.
+          <p style={{fontSize:12,color:'var(--blue-700)',marginTop:6,marginBottom:0,fontStyle:'italic',display:'flex',alignItems:'center',gap:5}}>
+            <LIcon name="banana" size={12} /> A banana also works. We don't judge.
           </p>
         </div>
         <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -333,7 +362,7 @@ function ScreenCapture({ go, active, images, setImages }) {
             <div style={{width:60,height:60,borderRadius:'50%',background:'#fff',border:'2.5px solid rgba(0,0,0,.08)'}} />
           </button>
           <label className="cam-ctrl" title="Upload from library" style={{cursor:'pointer'}}>
-            📁
+            <LIcon name="folder-open" size={22} />
             <input type="file" accept="image/*" style={{display:'none'}} onChange={addFromLibrary} />
           </label>
         </div>
@@ -350,31 +379,31 @@ function ScreenCapture({ go, active, images, setImages }) {
 
 /* ── SCREEN 2 · MATERIAL PICKER ─────────────────────────────────────────── */
 const MATERIALS = [
-  { id:'wood',        icon:'🪵', label:'Solid Wood',    sub:'Oak, pine, walnut', lbsPerCuFt: 45 },
-  { id:'upholstered', icon:'🛋️', label:'Upholstered',   sub:'Sofa, chair, ottoman', lbsPerCuFt: 22 },
-  { id:'particleboard',icon:'📦',label:'Particleboard', sub:'IKEA-style, MDF', lbsPerCuFt: 35 },
-  { id:'metal',       icon:'🔩', label:'Metal',                  sub:'Steel, iron, aluminum', lbsPerCuFt: 90 },
-  { id:'castiron',    icon:'⚙️', label:'Cast Iron / Heavy Steel', sub:'Machinery, engines, frames', lbsPerCuFt: 450 },
-  { id:'marble',      icon:'🪨', label:'Marble',                  sub:'Stone, granite top', lbsPerCuFt: 160 },
-  { id:'glass',       icon:'🪟', label:'Glass / Mixed',           sub:'Cabinets, shelves', lbsPerCuFt: 30 },
-  { id:'unknown',     icon:'❓', label:'Not Sure',      sub:'Let AI decide', lbsPerCuFt: null },
+  { id:'wood',        icon:'tree-pine',   label:'Solid Wood',    sub:'Oak, pine, walnut', lbsPerCuFt: 45 },
+  { id:'upholstered', icon:'sofa',        label:'Upholstered',   sub:'Sofa, chair, ottoman', lbsPerCuFt: 22 },
+  { id:'particleboard',icon:'package',    label:'Particleboard', sub:'IKEA-style, MDF', lbsPerCuFt: 35 },
+  { id:'metal',       icon:'wrench',      label:'Metal',                  sub:'Steel, iron, aluminum', lbsPerCuFt: 90 },
+  { id:'castiron',    icon:'settings-2',  label:'Cast Iron / Heavy Steel', sub:'Machinery, engines, frames', lbsPerCuFt: 450 },
+  { id:'marble',      icon:'gem',         label:'Marble',                  sub:'Stone, granite top', lbsPerCuFt: 160 },
+  { id:'glass',       icon:'layers',      label:'Glass / Mixed',           sub:'Cabinets, shelves', lbsPerCuFt: 30 },
+  { id:'unknown',     icon:'help-circle', label:'Not Sure',      sub:'Let AI decide', lbsPerCuFt: null },
 ];
 
 const CREW_OPTIONS = [
-  { n: 1, icon: '🧍',     label: '1 person'   },
-  { n: 2, icon: '🧍🧍',   label: '2 people'   },
-  { n: 3, icon: '🧍🧍🧍', label: '3+ people'  },
+  { n: 1, icon: 'user',  label: '1 person'   },
+  { n: 2, icon: 'users', label: '2 people'   },
+  { n: 3, icon: 'users', label: '3+ people'  },
 ];
 
 const MACHINERY_MATERIALS = [
-  { id:'castiron', icon:'⚙️', label:'Cast Iron / Steel', sub:'Machinery, engines, frames', lbsPerCuFt: 450 },
-  { id:'metal',    icon:'🔩', label:'Metal / Aluminum',  sub:'Light equipment, frames',   lbsPerCuFt: 90  },
-  { id:'unknown',  icon:'❓', label:'Not Sure',           sub:'Let AI decide',              lbsPerCuFt: null },
+  { id:'castiron', icon:'settings-2',  label:'Cast Iron / Steel', sub:'Machinery, engines, frames', lbsPerCuFt: 450 },
+  { id:'metal',    icon:'wrench',      label:'Metal / Aluminum',  sub:'Light equipment, frames',   lbsPerCuFt: 90  },
+  { id:'unknown',  icon:'help-circle', label:'Not Sure',           sub:'Let AI decide',              lbsPerCuFt: null },
 ];
 
 const CONDITION_OPTIONS = [
-  { id:'operational',     icon:'✅', label:'Operational',     sub:'Runs / drives on its own' },
-  { id:'non-operational', icon:'🔴', label:'Non-Operational', sub:'Needs crane or forklift'  },
+  { id:'operational',     icon:'check-circle', label:'Operational',     sub:'Runs / drives on its own' },
+  { id:'non-operational', icon:'x-circle',     label:'Non-Operational', sub:'Needs crane or forklift'  },
 ];
 
 function ScreenMaterial({ go, detecting, category, setCategory, materials, setMaterials, crew, setCrew, condition, setCondition }) {
@@ -416,7 +445,7 @@ function ScreenMaterial({ go, detecting, category, setCategory, materials, setMa
                 </div>
                 <div>
                   <div style={{fontSize:11,fontWeight:700,color:'var(--green-700)',textTransform:'uppercase',letterSpacing:'.4px'}}>Auto-detected</div>
-                  <div style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>{category==='machinery'?'🚜 Machinery':'🛋️ Furniture & Household'}</div>
+                  <div style={{fontSize:14,fontWeight:700,color:'var(--gray-800)',display:'flex',alignItems:'center',gap:6}}>{category==='machinery'?<><LIcon name="tractor" size={16}/> Machinery</>:<><LIcon name="sofa" size={16}/> Furniture & Household</>}</div>
                 </div>
               </div>
             )}
@@ -430,13 +459,13 @@ function ScreenMaterial({ go, detecting, category, setCategory, materials, setMa
           </p>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:24}}>
-          {[{id:'furniture',icon:'🛋️',label:'Furniture',sub:'Household & office'},{id:'machinery',icon:'🚜',label:'Machinery',sub:'Equipment & industrial'}].map(c=>{
+          {[{id:'furniture',icon:'sofa',label:'Furniture',sub:'Household & office'},{id:'machinery',icon:'tractor',label:'Machinery',sub:'Equipment & industrial'}].map(c=>{
             const sel = category===c.id;
             return (
               <div key={c.id} className={`material-tile${sel?' selected':''}`} style={{position:'relative',padding:'16px 12px'}}
                 onClick={()=>{ setCategory(c.id); setMaterials([]); setCrew(null); setCondition(null); }}>
                 {sel && <div style={{position:'absolute',top:6,right:6,width:18,height:18,borderRadius:'50%',background:'var(--blue-600)',display:'flex',alignItems:'center',justifyContent:'center'}}><IcoCheck /></div>}
-                <div style={{fontSize:30}}>{c.icon}</div>
+                <LIcon name={c.icon} size={30} />
                 <div><div className="material-tile__label">{c.label}</div><div className="material-tile__sub">{c.sub}</div></div>
               </div>
             );
@@ -454,7 +483,7 @@ function ScreenMaterial({ go, detecting, category, setCategory, materials, setMa
               return (
                 <div key={m.id} className={`material-tile${sel?' selected':''}`} style={{position:'relative'}} onClick={()=>toggle(m.id)}>
                   {sel && <div style={{position:'absolute',top:6,right:6,width:18,height:18,borderRadius:'50%',background:'var(--blue-600)',display:'flex',alignItems:'center',justifyContent:'center'}}><IcoCheck /></div>}
-                  <div className="material-tile__icon">{m.icon}</div>
+                  <div className="material-tile__icon"><LIcon name={m.icon} size={28} /></div>
                   <div><div className="material-tile__label">{m.label}</div><div className="material-tile__sub">{m.sub}</div></div>
                 </div>
               );
@@ -468,7 +497,7 @@ function ScreenMaterial({ go, detecting, category, setCategory, materials, setMa
           <div style={{display:'flex',gap:8,marginBottom:8}}>
             {CREW_OPTIONS.map(({n,icon,label})=>(
               <div key={n} className={`material-tile${crew===n?' selected':''}`} style={{flex:1,padding:'12px 6px'}} onClick={()=>setCrew(n)}>
-                <div style={{fontSize:20,lineHeight:1}}>{icon}</div>
+                <LIcon name={icon} size={22} />
                 <div className="material-tile__label" style={{fontSize:12,marginTop:2}}>{label}</div>
               </div>
             ))}
@@ -483,7 +512,7 @@ function ScreenMaterial({ go, detecting, category, setCategory, materials, setMa
             {CONDITION_OPTIONS.map(c=>(
               <div key={c.id} className={`material-tile${condition===c.id?' selected':''}`} style={{position:'relative'}} onClick={()=>setCondition(c.id)}>
                 {condition===c.id && <div style={{position:'absolute',top:6,right:6,width:18,height:18,borderRadius:'50%',background:'var(--blue-600)',display:'flex',alignItems:'center',justifyContent:'center'}}><IcoCheck /></div>}
-                <div style={{fontSize:26}}>{c.icon}</div>
+                <LIcon name={c.icon} size={26} />
                 <div><div className="material-tile__label">{c.label}</div><div className="material-tile__sub">{c.sub}</div></div>
               </div>
             ))}
@@ -652,7 +681,7 @@ function ScreenResults({ go, units, showConfidence, result }) {
         {/* Crew / Rigging badge */}
         {isMachinery ? (
           <div className="crew-badge" style={{background: rig.heavy?'var(--orange-50)':'var(--green-50)', borderColor: rig.heavy?'var(--orange-200)':'var(--green-200)'}}>
-            <div style={{fontSize:28,lineHeight:1}}>{rig.icon}</div>
+            <LIcon name={rig.icon} size={28} />
             <div>
               <div style={{fontWeight:700,fontSize:14,color: rig.heavy?'var(--orange-800)':'var(--green-800)'}}>{rig.label}</div>
               <div style={{fontSize:12,color:'var(--gray-600)'}}>Based on ~{showTons?`${weightTons} tons`:`${result.weightLbs} lbs`}</div>
@@ -660,7 +689,10 @@ function ScreenResults({ go, units, showConfidence, result }) {
           </div>
         ) : (
           <div className="crew-badge" style={{background: crewHeavy?'var(--orange-50)':'var(--green-50)', borderColor: crewHeavy?'var(--orange-200)':'var(--green-200)'}}>
-            <div style={{fontSize:28,lineHeight:1}}>{'🧍'.repeat(Math.min(crewCount,2))}{crewCount>2?'+':''}</div>
+            <div style={{display:'flex',alignItems:'center',gap:2}}>
+              <LIcon name={crewCount===1?'user':'users'} size={28} />
+              {crewCount>2 && <span style={{fontSize:14,fontWeight:700,lineHeight:1}}>+</span>}
+            </div>
             <div>
               <div style={{fontWeight:700,fontSize:14,color: crewHeavy?'var(--orange-800)':'var(--green-800)'}}>{crewLabel}</div>
               <div style={{fontSize:12,color:'var(--gray-600)'}}>As selected by you</div>
@@ -697,7 +729,7 @@ function ScreenResults({ go, units, showConfidence, result }) {
           <div style={{display:'flex',gap:8,marginBottom:14}}>
             {result.trailerType && (
               <div style={{flex:1,display:'flex',alignItems:'center',gap:8,background:'var(--gray-100)',borderRadius:8,padding:'10px 12px'}}>
-                <span style={{fontSize:18}}>🚛</span>
+                <IcoTruck />
                 <div>
                   <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px'}}>Trailer</div>
                   <div style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>{TRAILER_LABELS[result.trailerType] || result.trailerType}</div>
@@ -706,7 +738,7 @@ function ScreenResults({ go, units, showConfidence, result }) {
             )}
             {result.condition && (
               <div style={{flex:1,display:'flex',alignItems:'center',gap:8,background: result.condition==='operational'?'var(--green-50)':'var(--orange-50)',borderRadius:8,padding:'10px 12px',border:`1px solid ${result.condition==='operational'?'var(--green-200)':'var(--orange-200)'}`}}>
-                <span style={{fontSize:18}}>{result.condition==='operational'?'✅':'🔴'}</span>
+                <LIcon name={result.condition==='operational'?'check-circle':'x-circle'} size={18} />
                 <div>
                   <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px'}}>Condition</div>
                   <div style={{fontSize:13,fontWeight:700,color: result.condition==='operational'?'var(--green-800)':'var(--orange-800)'}}>{result.condition==='operational'?'Operational':'Non-Operational'}</div>
@@ -782,8 +814,10 @@ function ScreenNextSteps({ go, result }) {
         <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
           {(r.tags||[]).map((tag,i)=><span key={i} className="skid-tag skid-tag--compact">{tag}</span>)}
         </div>
-        <div style={{fontSize:13,color:(r.crew||1)>=2?'var(--orange-700)':'var(--green-700)',fontWeight:700}}>
-          {'🧍'.repeat(Math.min(r.crew||1,2))}{(r.crew||1)>2?'+ ':'  '}{(r.crew||1)===1?'1 person':(r.crew||1)===2?'2 people':'3+ people'} needed
+        <div style={{fontSize:13,color:(r.crew||1)>=2?'var(--orange-700)':'var(--green-700)',fontWeight:700,display:'flex',alignItems:'center',gap:6}}>
+          <LIcon name={(r.crew||1)===1?'user':'users'} size={18} />
+          {(r.crew||1)>2 && <span>+</span>}
+          {(r.crew||1)===1?'1 person':(r.crew||1)===2?'2 people':'3+ people'} needed
         </div>
       </div>
       <div style={{padding:'16px 16px 0'}}>
