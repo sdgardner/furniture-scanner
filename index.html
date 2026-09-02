@@ -1272,6 +1272,8 @@ const MAT_BY_ID = Object.fromEntries(MATERIALS.map(m=>[m.id,m]));
 
 function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
   const [openId, setOpenId] = useState(null);
+  const [rescanId, setRescanId] = useState(null);
+  const [rescanErr, setRescanErr] = useState(null);
 
   const totItems  = inventory.reduce((s,it)=>s+(it.qty||1),0);
   const totWeight = Math.round(inventory.reduce((s,it)=>s+(it.weightLbs||0)*(it.qty||1),0));
@@ -1289,6 +1291,36 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
   const setField  = (id, f, val) => setInventory(prev => prev.map(it =>
     it.id===id ? { ...it, [f]: val==='' ? '' : Math.max(0, parseFloat(val)||0), ...(f!=='qty'?{confidence:100}:{}) } : it
   ));
+
+  // Close-up photo rescan → single-item /analyze → overwrite the row
+  const rescanPhoto = (id, file) => {
+    setRescanErr(null); setRescanId(id);
+    const reader = new FileReader();
+    reader.onload = ev => compressImage(ev.target.result).then(img => {
+      const it = inventory.find(x => x.id === id);
+      const matLabel = it && it.material !== 'unknown' ? MAT_BY_ID[it.material]?.label : null;
+      fetch(`${API_URL}/analyze`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ images:[img], materials: matLabel ? [matLabel] : [] }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) { setRescanErr(data.error); return; }
+          setInventory(prev => prev.map(x => x.id===id ? {
+            ...x,
+            itemType:  data.itemType  || x.itemType,
+            width:     data.width     ?? x.width,
+            height:    data.height    ?? x.height,
+            depth:     data.depth     ?? x.depth,
+            weightLbs: data.weightLbs ?? x.weightLbs,
+            confidence: data.confidence ?? 90,
+          } : x));
+        })
+        .catch(() => setRescanErr('Could not reach the server — try again.'))
+        .finally(() => setRescanId(null));
+    });
+    reader.readAsDataURL(file);
+  };
 
   const post = () => {
     const rooms = [...new Set(inventory.map(it=>it.room).filter(r=>r && r!=='Unknown'))];
@@ -1320,7 +1352,7 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
       </div>
 
       <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
-        <p style={{fontSize:12,color:'var(--gray-500)',marginBottom:10}}>Tap an item to adjust its size, material, or crew. Anything flagged orange is a low-confidence guess — worth a quick check.</p>
+        <p style={{fontSize:12,color:'var(--gray-500)',marginBottom:10}}>Tap an item to adjust its size, material, or crew. Anything flagged orange is a low-confidence guess — open it and rescan with a close-up photo for a tighter estimate.</p>
         {inventory.map(it=>{
           const open = openId===it.id;
           const mat = MAT_BY_ID[it.material] || MAT_BY_ID.unknown;
@@ -1381,9 +1413,25 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
                       </button>
                     ))}
                   </div>
-                  <button onClick={()=>removeIt(it.id)} className="skid-btn skid-btn--ghost skid-btn--sm" style={{marginTop:12,color:'var(--red-600, #c0392b)',gap:6}}>
-                    <LIcon name="trash-2" size={14} />Remove from inventory
-                  </button>
+                  <div style={{display:'flex',gap:8,marginTop:12,alignItems:'center',flexWrap:'wrap'}}>
+                    <label className="skid-btn skid-btn--secondary skid-btn--sm" style={{gap:6,cursor: rescanId===null?'pointer':'default',opacity: rescanId!==null && rescanId!==it.id ? .5 : 1}}>
+                      <LIcon name="camera" size={14} />{rescanId===it.id ? 'Rescanning…' : 'Rescan with a photo'}
+                      <input type="file" accept="image/*" capture="environment" style={{display:'none'}} disabled={rescanId!==null}
+                        onChange={e=>{ const f=e.target.files[0]; e.target.value=''; if(f) rescanPhoto(it.id, f); }} />
+                    </label>
+                    <button onClick={()=>removeIt(it.id)} className="skid-btn skid-btn--ghost skid-btn--sm" style={{color:'var(--red-600, #c0392b)',gap:6}}>
+                      <LIcon name="trash-2" size={14} />Remove
+                    </button>
+                  </div>
+                  {rescanId===it.id && (
+                    <p style={{fontSize:12,color:'var(--blue-700)',marginTop:8,display:'flex',alignItems:'center',gap:6}}>
+                      <span style={{width:8,height:8,borderRadius:'50%',background:'var(--blue-500)',animation:'rec-blink 1s infinite'}} />
+                      Analyzing your close-up — this takes a few seconds…
+                    </p>
+                  )}
+                  {rescanErr && openId===it.id && rescanId!==it.id && (
+                    <p style={{fontSize:12,color:'var(--orange-700)',marginTop:8}}>{rescanErr}</p>
+                  )}
                 </div>
               )}
             </div>
