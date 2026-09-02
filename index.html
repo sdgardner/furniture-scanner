@@ -100,7 +100,7 @@
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://unpkg.com/lucide@1.39.0/dist/umd/lucide.min.js"></script>
   <script type="text/babel" src="project/tweaks-panel.jsx"></script>
 </head>
 <body>
@@ -134,10 +134,16 @@ const IcoPlus    = () => <Ico d={['M12 5v14','M5 12h14']} size={20} stroke={2} /
 let _lucideIconsCache = null;
 function _getLucideIcons() {
   if (!_lucideIconsCache && window.lucide) {
-    _lucideIconsCache = {};
-    Object.entries(window.lucide).forEach(([k,v]) => {
-      if (typeof v === 'function' && k.charCodeAt(0) >= 65 && k.charCodeAt(0) <= 90) _lucideIconsCache[k] = v;
-    });
+    // Modern lucide UMD ships a ready-made icons registry; fall back to
+    // collecting the PascalCase exports (icon data are arrays, not functions)
+    if (window.lucide.icons) {
+      _lucideIconsCache = window.lucide.icons;
+    } else {
+      _lucideIconsCache = {};
+      Object.entries(window.lucide).forEach(([k,v]) => {
+        if (v && k.charCodeAt(0) >= 65 && k.charCodeAt(0) <= 90) _lucideIconsCache[k] = v;
+      });
+    }
   }
   return _lucideIconsCache || {};
 }
