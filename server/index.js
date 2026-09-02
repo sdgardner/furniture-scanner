@@ -162,6 +162,8 @@ app.post('/inventory', async (req, res) => {
 
 Build a deduplicated inventory of every shippable household item visible across all frames.
 
+SCALE CALIBRATION FIRST: the user was instructed to start each room by filming its doorway head-on. Look for interior doorways in the earliest frames of each room — a standard interior door is 80" tall and 32-36" wide (most commonly 32"). Establish pixels-per-inch from that doorframe and carry the calibration through that room's items, adjusting for how much closer or farther each item is than the door.
+
 CRITICAL — deduplication: the camera moves through the space, so the SAME physical item appears in multiple consecutive frames from different angles. Count each physical item exactly ONCE. Identical multiples (e.g. 4 matching dining chairs) go on one line with qty.
 
 Include: furniture, appliances, TVs/electronics, rugs, mirrors, large boxes, exercise equipment, and anything else a mover would put on a truck.
