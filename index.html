@@ -174,45 +174,98 @@ function compressImage(dataUrl, maxDim = 1600, quality = 0.75) {
   });
 }
 
-// Sample evenly-spaced frames from a video file → array of compressed JPEG data URLs
+// Sample evenly-spaced frames from a video file → array of compressed JPEG data URLs.
+// Hardened for iOS Safari: video is attached to the DOM and primed with a muted
+// play() so frames paint to canvas, every seek has a timeout fallback, and a
+// watchdog guarantees this promise always settles.
 function extractFrames(file, onProgress, maxFrames = 20) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const video = document.createElement('video');
     video.muted = true; video.playsInline = true; video.preload = 'auto';
-    const fail = (msg) => { URL.revokeObjectURL(url); reject(new Error(msg)); };
-    video.onerror = () => fail('Video load failed');
-    video.onloadedmetadata = () => {
-      const start = () => {
-        const dur = video.duration;
-        if (!isFinite(dur) || dur <= 0) return fail('Could not read video length');
-        const count = Math.min(maxFrames, Math.max(6, Math.round(dur / 2)));
-        const times = Array.from({ length: count }, (_, i) => (dur * (i + 0.5)) / count);
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const frames = [];
-        let idx = 0;
-        video.onseeked = () => {
-          const maxDim = 800;
-          const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
-          canvas.width = Math.round(video.videoWidth * scale);
-          canvas.height = Math.round(video.videoHeight * scale);
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          frames.push(canvas.toDataURL('image/jpeg', 0.6));
-          onProgress?.(frames.length, count);
-          idx++;
-          if (idx >= times.length) { URL.revokeObjectURL(url); resolve(frames); }
-          else video.currentTime = times[idx];
-        };
-        video.currentTime = times[0];
-      };
-      // MediaRecorder clips can report Infinity until seeked far forward
-      if (!isFinite(video.duration)) {
-        video.ontimeupdate = () => { video.ontimeupdate = null; start(); };
-        video.currentTime = 1e7;
-      } else start();
+    video.setAttribute('muted',''); video.setAttribute('playsinline','');
+    video.style.cssText = 'position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none;';
+    document.body.appendChild(video);
+
+    let settled = false;
+    const frames = [];
+    const cleanup = () => { try { video.pause(); video.remove(); URL.revokeObjectURL(url); } catch(e){} };
+    const finish  = () => { if (settled) return; settled = true; clearTimeout(watchdog); cleanup(); resolve(frames); };
+    const fail    = (msg) => {
+      if (settled) return;
+      // If we already got a usable set of frames, salvage them instead of failing
+      if (frames.length >= 4) return finish();
+      settled = true; clearTimeout(watchdog); cleanup(); reject(new Error(msg));
     };
+
+    // Global watchdog: no progress for 15s → settle one way or the other
+    let watchdog = setTimeout(() => fail('Frame extraction timed out'), 20000);
+    const kick = () => { clearTimeout(watchdog); watchdog = setTimeout(() => fail('Frame extraction timed out'), 15000); };
+
+    video.onerror = () => fail('Video load failed');
+
+    const begin = () => {
+      const dur = video.duration;
+      if (!isFinite(dur) || dur <= 0) return fail('Could not read video length');
+      const count = Math.min(maxFrames, Math.max(6, Math.round(dur / 2)));
+      const times = Array.from({ length: count }, (_, i) => (dur * (i + 0.5)) / count);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      let idx = 0;
+      let awaitingSeek = false;
+      let seekTimer = null;
+
+      const grab = () => {
+        if (settled || !awaitingSeek) return;
+        awaitingSeek = false;
+        clearTimeout(seekTimer);
+        kick();
+        try {
+          const vw = video.videoWidth || 640, vh = video.videoHeight || 480;
+          const scale = Math.min(1, 800 / Math.max(vw, vh));
+          canvas.width = Math.round(vw * scale);
+          canvas.height = Math.round(vh * scale);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          if (dataUrl.length > 2000) frames.push(dataUrl); // skip blank/black frames
+        } catch(e) { /* skip unreadable frame */ }
+        onProgress?.(Math.min(idx + 1, count), count);
+        idx++;
+        if (idx >= times.length) finish();
+        else seek(times[idx]);
+      };
+
+      const seek = (t) => {
+        awaitingSeek = true;
+        clearTimeout(seekTimer);
+        // iOS sometimes never fires seeked — grab whatever is painted after 2.5s
+        seekTimer = setTimeout(grab, 2500);
+        try { video.currentTime = Math.min(t, Math.max(0, dur - 0.1)); }
+        catch(e) { grab(); }
+      };
+
+      video.onseeked = grab;
+      seek(times[0]);
+    };
+
+    video.onloadedmetadata = () => {
+      kick();
+      // Prime playback — muted+playsinline autoplay is allowed on iOS and is
+      // required before canvas.drawImage(video) reliably paints frames
+      const proceed = () => {
+        try { video.pause(); } catch(e){}
+        if (!isFinite(video.duration)) {
+          // MediaRecorder clips report Infinity until seeked far forward
+          video.ontimeupdate = () => { video.ontimeupdate = null; begin(); };
+          try { video.currentTime = 1e7; } catch(e) { fail('Could not read video length'); }
+        } else begin();
+      };
+      const p = video.play();
+      if (p && p.then) p.then(proceed).catch(proceed); else proceed();
+    };
+
     video.src = url;
+    video.load();
   });
 }
 
