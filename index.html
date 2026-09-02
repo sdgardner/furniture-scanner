@@ -174,6 +174,48 @@ function compressImage(dataUrl, maxDim = 1600, quality = 0.75) {
   });
 }
 
+// Sample evenly-spaced frames from a video file → array of compressed JPEG data URLs
+function extractFrames(file, onProgress, maxFrames = 20) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.muted = true; video.playsInline = true; video.preload = 'auto';
+    const fail = (msg) => { URL.revokeObjectURL(url); reject(new Error(msg)); };
+    video.onerror = () => fail('Video load failed');
+    video.onloadedmetadata = () => {
+      const start = () => {
+        const dur = video.duration;
+        if (!isFinite(dur) || dur <= 0) return fail('Could not read video length');
+        const count = Math.min(maxFrames, Math.max(6, Math.round(dur / 2)));
+        const times = Array.from({ length: count }, (_, i) => (dur * (i + 0.5)) / count);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const frames = [];
+        let idx = 0;
+        video.onseeked = () => {
+          const maxDim = 800;
+          const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
+          canvas.width = Math.round(video.videoWidth * scale);
+          canvas.height = Math.round(video.videoHeight * scale);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          frames.push(canvas.toDataURL('image/jpeg', 0.6));
+          onProgress?.(frames.length, count);
+          idx++;
+          if (idx >= times.length) { URL.revokeObjectURL(url); resolve(frames); }
+          else video.currentTime = times[idx];
+        };
+        video.currentTime = times[0];
+      };
+      // MediaRecorder clips can report Infinity until seeked far forward
+      if (!isFinite(video.duration)) {
+        video.ontimeupdate = () => { video.ontimeupdate = null; start(); };
+        video.currentTime = 1e7;
+      } else start();
+    };
+    video.src = url;
+  });
+}
+
 function crewInfo(weightLbs, itemType) {
   const bulky = /sofa|sectional|couch|armoire|wardrobe|piano|cabinet/i.test(itemType||'');
   if (weightLbs >= 100 || bulky) return { count: 2, label: '2+ people required', color: 'var(--orange-600)' };
@@ -255,6 +297,10 @@ function ScreenHome({ go, scans }) {
               reader.readAsDataURL(file);
             }} />
           </label>
+          <button className="skid-btn skid-btn--secondary skid-btn--lg" style={{width:'100%',gap:10,position:'relative'}} onClick={()=>go(6)}>
+            <LIcon name="video" size={20} />Scan a Whole Move
+            <span className="skid-badge skid-badge--green skid-badge--solid skid-badge--sm" style={{position:'absolute',top:-8,right:-4}}>NEW</span>
+          </button>
         </div>
       </div>
       <div style={{padding:'16px 16px 8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
@@ -807,7 +853,7 @@ function ScreenNextSteps({ go, result }) {
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
           <div>
             <div style={{fontWeight:700,fontSize:18,color:'var(--gray-800)',marginBottom:3}}>{r.itemType||'Item'}</div>
-            <div style={{fontSize:13,color:'var(--gray-600)'}}>{r.width}"×{r.height}"×{r.depth}" · ~{r.weightLbs} lbs</div>
+            <div style={{fontSize:13,color:'var(--gray-600)'}}>{r.width ? `${r.width}"×${r.height}"×${r.depth}" · ` : ''}~{r.weightLbs} lbs</div>
           </div>
           <span className="skid-badge skid-badge--green skid-badge--solid">{r.confidence}% match</span>
         </div>
@@ -844,6 +890,287 @@ function ScreenNextSteps({ go, result }) {
   );
 }
 
+/* ── SCREEN 6 · MOVE VIDEO CAPTURE ──────────────────────────────────────── */
+function ScreenMoveCapture({ go, active, frames, setFrames }) {
+  const [extracting, setExtracting] = useState(false);
+  const [prog, setProg] = useState([0, 0]);
+  const [err, setErr] = useState(null);
+
+  useEffect(() => { if (!active) { setExtracting(false); setErr(null); } }, [active]);
+
+  const onVideo = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    e.target.value = '';
+    setErr(null); setFrames([]); setProg([0, 0]); setExtracting(true);
+    extractFrames(file, (done, total) => setProg([done, total]))
+      .then(fs => { setFrames(fs); setExtracting(false); })
+      .catch(() => { setErr('Could not read that video — try a shorter clip (60–90 seconds works best).'); setExtracting(false); });
+  };
+
+  return (
+    <div style={{flex:1,display:'flex',flexDirection:'column',background:'var(--gray-50)'}}>
+      <div className="back-bar">
+        <button className="skid-btn skid-btn--ghost skid-btn--sm" style={{width:36,height:36,padding:0}} onClick={()=>go(0)}><IcoBack /></button>
+        <span style={{fontWeight:700,fontSize:16,color:'var(--gray-800)'}}>Scan a Whole Move</span>
+      </div>
+      <div style={{flex:1,padding:'20px 16px',overflow:'auto'}}>
+        <div style={{background:'var(--blue-50)',border:'1px solid var(--blue-200)',borderRadius:8,padding:'12px 14px',marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:'var(--blue-800)',marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
+            <LIcon name="video" size={14} /> How to film your walkthrough
+          </div>
+          <p style={{fontSize:13,color:'var(--blue-900)',lineHeight:1.55,margin:0}}>
+            Walk slowly through each room, keeping items in frame for a couple of seconds. Pan across furniture, appliances, and anything going on the truck. 60–90 seconds total works best.
+          </p>
+        </div>
+
+        <label className="skid-btn skid-btn--primary skid-btn--lg" style={{width:'100%',gap:10,cursor:'pointer',marginBottom:16}}>
+          <LIcon name="video" size={20} />{frames.length ? 'Record / Upload a Different Video' : 'Record or Upload Video'}
+          <input type="file" accept="video/*" capture="environment" style={{display:'none'}} onChange={onVideo} />
+        </label>
+
+        {err && (
+          <div className="skid-alert skid-alert--error" style={{marginBottom:16}}>
+            <IcoWarn />
+            <div className="skid-alert__body"><div className="skid-alert__text">{err}</div></div>
+          </div>
+        )}
+
+        {extracting && (
+          <div style={{marginBottom:16}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+              <span style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>Extracting frames…</span>
+              <span style={{fontSize:13,fontWeight:700,color:'var(--blue-600)'}}>{prog[0]}/{prog[1]||'…'}</span>
+            </div>
+            <div className="skid-progress" style={{background:'var(--gray-300)'}}>
+              <span className="skid-progress__fill" style={{width:`${prog[1]?Math.round(prog[0]/prog[1]*100):5}%`,transition:'width 200ms ease'}} />
+            </div>
+          </div>
+        )}
+
+        {frames.length > 0 && !extracting && (
+          <>
+            <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.4px'}}>
+              {frames.length} frames captured <span style={{fontWeight:400,color:'var(--gray-500)',textTransform:'none',letterSpacing:0}}>(tap × to remove blurry ones)</span>
+            </p>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:16}}>
+              {frames.map((f,i)=>(
+                <div key={i} style={{position:'relative'}}>
+                  <img src={f} style={{width:'100%',aspectRatio:'4/3',objectFit:'cover',borderRadius:6,border:'1px solid var(--gray-300)',display:'block'}} />
+                  <button onClick={()=>setFrames(prev=>prev.filter((_,j)=>j!==i))}
+                    style={{position:'absolute',top:-5,right:-5,width:18,height:18,borderRadius:'50%',background:'rgba(200,30,30,.9)',color:'#fff',border:'2px solid #fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,lineHeight:1,padding:0}}>
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+      {frames.length > 0 && !extracting && (
+        <div style={{padding:'12px 16px',background:'var(--gray-0)',borderTop:'1px solid var(--gray-200)'}}>
+          <button className="skid-btn skid-btn--primary skid-btn--lg" style={{width:'100%'}} onClick={()=>go(7)}>
+            Analyze Move →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── SCREEN 7 · MOVE PROCESSING ─────────────────────────────────────────── */
+function ScreenMoveProcessing({ go, active, frames, onInventory }) {
+  const [step, setStep] = useState(0);
+  const [error, setError] = useState(null);
+  const steps = ['Frames received','Walking the rooms','Cataloging items','Estimating sizes & weights'];
+
+  useEffect(() => {
+    if (!active) { setStep(0); setError(null); return; }
+    if (!frames?.length) { setError('No video frames. Please go back and record a walkthrough.'); return; }
+    setStep(0); setError(null);
+    let s = 0;
+    const advance = setInterval(()=>{ s=Math.min(s+1,steps.length-1); setStep(s); }, 2500);
+    fetch(`${API_URL}/inventory`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ frames }),
+    })
+      .then(r=>r.json())
+      .then(data=>{
+        clearInterval(advance); setStep(steps.length-1);
+        if (data.error) { setError(data.error); return; }
+        const items = (data.items||[]).map((it,i)=>({ id:i, qty:1, crew:1, material:'unknown', ...it }));
+        if (!items.length) { setError('No items detected in the video. Try filming closer to the items.'); return; }
+        setTimeout(()=>{ onInventory(items); go(8); }, 600);
+      })
+      .catch(()=>{ clearInterval(advance); setError('Could not reach the server. Please try again.'); });
+    return ()=>clearInterval(advance);
+  }, [active]);
+
+  const pct = Math.round(((step+1)/steps.length)*100);
+
+  return (
+    <div style={{flex:1,display:'flex',flexDirection:'column',background:'var(--gray-50)'}}>
+      <div className="back-bar" style={{justifyContent:'center'}}>
+        <span style={{fontWeight:700,fontSize:16,color:'var(--gray-800)'}}>{error?'Oops':'Taking Inventory...'}</span>
+      </div>
+      <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'28px 24px',gap:24}}>
+        <div style={{display:'flex',gap:8,width:'100%',maxWidth:320}}>
+          {(frames||[]).slice(0,3).map((img,i)=>(
+            <div key={i} style={{flex:1,aspectRatio:'4/3',borderRadius:8,overflow:'hidden',border:'1px solid var(--gray-300)',position:'relative'}}>
+              <img src={img} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+              {!error && i===0 && <div style={{position:'absolute',left:0,right:0,height:2,background:'linear-gradient(90deg,transparent,rgba(90,191,224,.9),transparent)',animation:'scan 1.8s ease-in-out infinite alternate',borderRadius:1}} />}
+            </div>
+          ))}
+        </div>
+        {error ? (
+          <>
+            <div className="skid-alert skid-alert--error" style={{width:'100%',maxWidth:320}}>
+              <IcoWarn />
+              <div className="skid-alert__body">
+                <div className="skid-alert__title">Analysis failed</div>
+                <div className="skid-alert__text">{error}</div>
+              </div>
+            </div>
+            <button className="skid-btn skid-btn--secondary skid-btn--lg" onClick={()=>go(6)}>Try Again</button>
+          </>
+        ) : (
+          <>
+            <div style={{width:'100%',maxWidth:320}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+                <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>Building your inventory</span>
+                <span style={{fontSize:14,fontWeight:700,color:'var(--blue-600)'}}>{pct}%</span>
+              </div>
+              <div className="skid-progress shimmer-wrap" style={{background:'var(--gray-300)'}}>
+                <span className="skid-progress__fill" style={{width:`${pct}%`,transition:'width 700ms ease'}} />
+              </div>
+            </div>
+            <div style={{width:'100%',maxWidth:320,display:'flex',flexDirection:'column',gap:12}}>
+              {steps.map((label,i)=>(
+                <div key={i} className="proc-step" style={{display:'flex',alignItems:'center',gap:12,animationDelay:`${i*.12}s`}}>
+                  <div style={{width:26,height:26,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:i<=step?'var(--action-primary)':'var(--gray-200)',border:`2px solid ${i<=step?'var(--action-primary)':'var(--gray-300)'}`,color:'#fff',transition:'all 300ms ease'}}>
+                    {i<=step?<IcoCheck />:null}
+                  </div>
+                  <span style={{fontSize:14,color:i<=step?'var(--gray-800)':'var(--gray-400)',fontWeight:i<=step?700:400,transition:'all 300ms ease'}}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── SCREEN 8 · MOVE INVENTORY ──────────────────────────────────────────── */
+const MAT_BY_ID = Object.fromEntries(MATERIALS.map(m=>[m.id,m]));
+
+function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
+  const [openId, setOpenId] = useState(null);
+
+  const totItems  = inventory.reduce((s,it)=>s+(it.qty||1),0);
+  const totWeight = Math.round(inventory.reduce((s,it)=>s+(it.weightLbs||0)*(it.qty||1),0));
+  const totCuFt   = Math.round(inventory.reduce((s,it)=>s+((it.width*it.height*it.depth)/1728||0)*(it.qty||1),0));
+
+  const setMat = (id, matId) => setInventory(prev => prev.map(it => {
+    if (it.id !== id) return it;
+    const oldD = MAT_BY_ID[it.material]?.lbsPerCuFt;
+    const newD = MAT_BY_ID[matId]?.lbsPerCuFt;
+    const weightLbs = (oldD && newD) ? Math.max(1, Math.round(it.weightLbs * newD / oldD)) : it.weightLbs;
+    return { ...it, material: matId, weightLbs };
+  }));
+  const setCrewN  = (id, n)  => setInventory(prev => prev.map(it => it.id===id ? {...it, crew:n} : it));
+  const removeIt  = (id)     => { setInventory(prev => prev.filter(it => it.id!==id)); if(openId===id) setOpenId(null); };
+
+  const post = () => {
+    const rooms = [...new Set(inventory.map(it=>it.room).filter(r=>r && r!=='Unknown'))];
+    onPost({
+      itemType: `Household Move — ${totItems} items`,
+      weightLbs: totWeight,
+      confidence: 85,
+      crew: Math.max(1, ...inventory.map(it=>it.crew||1)),
+      tags: [`${totItems} items`, `~${totCuFt} cu ft`, ...rooms.slice(0,4)],
+    });
+    go(5);
+  };
+
+  return (
+    <div style={{flex:1,display:'flex',flexDirection:'column',background:'var(--gray-50)'}}>
+      <div className="back-bar">
+        <button className="skid-btn skid-btn--ghost skid-btn--sm" style={{width:36,height:36,padding:0}} onClick={()=>go(6)}><IcoBack /></button>
+        <span style={{fontWeight:700,fontSize:16,color:'var(--gray-800)'}}>Move Inventory</span>
+      </div>
+
+      {/* Totals */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,padding:'14px 16px',background:'var(--gray-0)',borderBottom:'1px solid var(--gray-200)'}}>
+        {[[String(totItems),'Items'],[`~${totWeight.toLocaleString()}`,'lbs total'],[`~${totCuFt}`,'cu ft']].map(([val,lbl])=>(
+          <div key={lbl} className="stat-cell">
+            <div style={{fontSize:17,fontWeight:700,color:'var(--gray-800)'}}>{val}</div>
+            <div style={{fontSize:10,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px',marginTop:2}}>{lbl}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
+        <p style={{fontSize:12,color:'var(--gray-500)',marginBottom:10}}>Tap an item to adjust its material or crew — weights update automatically. Remove anything that isn't shipping.</p>
+        {inventory.map(it=>{
+          const open = openId===it.id;
+          const mat = MAT_BY_ID[it.material] || MAT_BY_ID.unknown;
+          return (
+            <div key={it.id} className="skid-card" style={{marginBottom:8,padding:0,overflow:'hidden'}}>
+              <div onClick={()=>setOpenId(open?null:it.id)} style={{display:'flex',gap:10,padding:'12px',alignItems:'center',cursor:'pointer'}}>
+                <div style={{width:36,height:36,borderRadius:8,background:'var(--blue-50)',color:'var(--blue-700)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  <LIcon name={mat.icon} size={18} />
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:14,color:'var(--gray-800)'}}>{it.itemType}{(it.qty||1)>1?` ×${it.qty}`:''}</div>
+                  <div style={{fontSize:12,color:'var(--gray-500)'}}>{it.room} · {it.width}"×{it.height}"×{it.depth}" · ~{it.weightLbs} lbs{(it.qty||1)>1?' each':''}</div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0,color:'var(--gray-400)'}}>
+                  <LIcon name={(it.crew||1)===1?'user':'users'} size={15} />
+                  <LIcon name={open?'chevron-up':'chevron-down'} size={16} />
+                </div>
+              </div>
+              {open && (
+                <div style={{padding:'0 12px 12px',borderTop:'1px solid var(--gray-100)'}}>
+                  <p style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px',margin:'10px 0 6px'}}>Material</p>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                    {MATERIALS.map(m=>(
+                      <button key={m.id} onClick={()=>setMat(it.id,m.id)}
+                        className={`skid-btn skid-btn--sm ${it.material===m.id?'skid-btn--secondary':'skid-btn--tertiary'}`}
+                        style={{height:30,fontSize:12,gap:5,padding:'0 10px'}}>
+                        <LIcon name={m.icon} size={13} />{m.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px',margin:'12px 0 6px'}}>Movers needed</p>
+                  <div style={{display:'flex',gap:6}}>
+                    {[1,2,3].map(n=>(
+                      <button key={n} onClick={()=>setCrewN(it.id,n)}
+                        className={`skid-btn skid-btn--sm ${(it.crew||1)===n?'skid-btn--secondary':'skid-btn--tertiary'}`}
+                        style={{height:30,fontSize:12,gap:5,padding:'0 12px'}}>
+                        <LIcon name={n===1?'user':'users'} size={13} />{n===3?'3+':n}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={()=>removeIt(it.id)} className="skid-btn skid-btn--ghost skid-btn--sm" style={{marginTop:12,color:'var(--red-600, #c0392b)',gap:6}}>
+                    <LIcon name="trash-2" size={14} />Remove from inventory
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{padding:'12px 16px',background:'var(--gray-0)',borderTop:'1px solid var(--gray-200)'}}>
+        <button className="skid-btn skid-btn--primary skid-btn--lg" style={{width:'100%',gap:8}} onClick={post} disabled={!inventory.length}>
+          <IcoTruck />Post This Move
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ── ROOT APP ────────────────────────────────────────────────────────────── */
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
@@ -856,6 +1183,8 @@ function App() {
   const [detecting, setDetecting] = useState(false);
   const [result, setResult]       = useState(null);
   const [scans, setScans]         = useState([]);
+  const [moveFrames, setMoveFrames] = useState([]);
+  const [inventory, setInventory]   = useState([]);
 
   const go = (n, imgs, mats, res) => {
     if (imgs !== undefined && imgs !== null) setImages(imgs);
@@ -888,7 +1217,7 @@ function App() {
   }, [screen]);
 
   // Reset when going back to home
-  useEffect(()=>{ if(screen===0){ setImages([]); setCategory(null); setMaterials([]); setCrew(null); setCondition(null); setDetecting(false); } },[screen]);
+  useEffect(()=>{ if(screen===0){ setImages([]); setCategory(null); setMaterials([]); setCrew(null); setCondition(null); setDetecting(false); setMoveFrames([]); setInventory([]); } },[screen]);
 
   return (
     <>
@@ -901,6 +1230,9 @@ function App() {
             <ScreenProcessing go={go} active={screen===3} images={images} category={category} materials={materials} crew={crew} condition={condition} onResult={onResult} />,
             <ScreenResults go={go} units={t.units} showConfidence={t.showConfidence} result={result} />,
             <ScreenNextSteps go={go} result={result} />,
+            <ScreenMoveCapture go={go} active={screen===6} frames={moveFrames} setFrames={setMoveFrames} />,
+            <ScreenMoveProcessing go={go} active={screen===7} frames={moveFrames} onInventory={setInventory} />,
+            <ScreenMoveInventory go={go} inventory={inventory} setInventory={setInventory} onPost={setResult} />,
           ].map((s,i)=>(
             <div key={i} className={`screen${i===screen?' active':i<screen?' behind':''}`}>{s}</div>
           ))}

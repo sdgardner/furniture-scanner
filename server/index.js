@@ -133,5 +133,65 @@ If you cannot identify the item, return:
   }
 });
 
+app.post('/inventory', async (req, res) => {
+  const { frames } = req.body;
+  if (!frames?.length) return res.status(400).json({ error: 'No video frames provided' });
+
+  const frameList = frames.slice(0, 24);
+  const imageBlocks = frameList.map(dataUrl => {
+    const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const mediaType = dataUrl.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/jpeg';
+    return { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
+  });
+
+  try {
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4000,
+      messages: [{
+        role: 'user',
+        content: [
+          ...imageBlocks,
+          {
+            type: 'text',
+            text: `You are a professional moving-survey estimator. These ${frameList.length} frames were sampled IN ORDER from one continuous walkthrough video of a home or space.
+
+Build a deduplicated inventory of every shippable household item visible across all frames.
+
+CRITICAL — deduplication: the camera moves through the space, so the SAME physical item appears in multiple consecutive frames from different angles. Count each physical item exactly ONCE. Identical multiples (e.g. 4 matching dining chairs) go on one line with qty.
+
+Include: furniture, appliances, TVs/electronics, rugs, mirrors, large boxes, exercise equipment, and anything else a mover would put on a truck.
+Ignore: built-in fixtures (cabinets, countertops, ceiling lights), walls/doors/windows, people and pets, and small loose items under ~5 lbs unless they are boxed.
+
+For each item:
+- Estimate dimensions in inches and weight in lbs, using standard visual references for scale (interior doorways ~80" tall and 32-36" wide, outlets/switches ~4.5" tall, sofa seat height ~18", countertops ~36" high).
+- Pick the dominant material from EXACTLY this list: wood, upholstered, particleboard, metal, castiron, marble, glass, unknown.
+- Estimate movers needed: 1, 2, or 3 (3 means 3+).
+- Name the room it was seen in (e.g. "Living Room", "Bedroom", "Garage"). If unclear, use "Unknown".
+
+Respond with ONLY valid JSON, no markdown, no code fences:
+{
+  "items": [
+    { "itemType": "specific item name", "room": "Living Room", "qty": 1, "width": <inches>, "height": <inches>, "depth": <inches>, "weightLbs": <lbs>, "material": "wood", "crew": 1, "fragility": "Low | Medium | High" }
+  ],
+  "confidence": <overall confidence 0-100>
+}
+If no shippable items are visible in any frame, return: {"error": "No items detected"}`
+          }
+        ]
+      }]
+    });
+
+    const raw = response.content[0].text.trim();
+    const text = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/, '').trim();
+    const json = JSON.parse(text);
+    console.log('Inventory:', json.items?.length ?? 0, 'items from', frameList.length, 'frames');
+    res.json(json);
+  } catch (err) {
+    console.error('Inventory error:', err.message);
+    res.status(500).json({ error: 'Inventory analysis failed', detail: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
