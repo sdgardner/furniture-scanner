@@ -58,6 +58,8 @@
     .shimmer-wrap { position: relative; overflow: hidden; }
     .shimmer-wrap::after { content:''; position:absolute; inset:0; width:40%; background: linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); animation: shimmer 1.5s infinite; }
 
+    @keyframes rec-blink { 0%,100% { opacity:1; } 50% { opacity:.25; } }
+
     /* Detection bar + checkmark */
     @keyframes detect-slide { 0% { transform: translateX(-200%); } 100% { transform: translateX(350%); } }
     @keyframes check-pop { 0% { transform: scale(0); opacity:0; } 65% { transform: scale(1.25); opacity:1; } 100% { transform: scale(1); opacity:1; } }
@@ -222,11 +224,11 @@ function extractFrames(file, onProgress, maxFrames = 20) {
         kick();
         try {
           const vw = video.videoWidth || 640, vh = video.videoHeight || 480;
-          const scale = Math.min(1, 800 / Math.max(vw, vh));
+          const scale = Math.min(1, 1200 / Math.max(vw, vh));
           canvas.width = Math.round(vw * scale);
           canvas.height = Math.round(vh * scale);
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
           if (dataUrl.length > 2000) frames.push(dataUrl); // skip blank/black frames
         } catch(e) { /* skip unreadable frame */ }
         onProgress?.(Math.min(idx + 1, count), count);
@@ -944,21 +946,117 @@ function ScreenNextSteps({ go, result }) {
 }
 
 /* ── SCREEN 6 · MOVE VIDEO CAPTURE ──────────────────────────────────────── */
+const PACE_STYLE = {
+  fast: { bg:'var(--orange-600)',    icon:'zap'   },
+  good: { bg:'var(--blue-600)',      icon:'check' },
+  hold: { bg:'var(--action-primary)',icon:'hand'  },
+};
+
 function ScreenMoveCapture({ go, active, frames, setFrames }) {
+  const videoRef     = useRef(null);
+  const streamRef    = useRef(null);
+  const recRef       = useRef(null);
+  const motionTimer  = useRef(null);
+  const clockTimer   = useRef(null);
+  const secsRef      = useRef(0);
+  const lastSample   = useRef(null);
+  const motionCanvas = useRef(null);
+
+  const [camOk, setCamOk]           = useState(true);
+  const [recording, setRecording]   = useState(false);
+  const [recSecs, setRecSecs]       = useState(0);
+  const [pace, setPace]             = useState(null);
   const [extracting, setExtracting] = useState(false);
-  const [prog, setProg] = useState([0, 0]);
-  const [err, setErr] = useState(null);
+  const [prog, setProg]             = useState([0, 0]);
+  const [err, setErr]               = useState(null);
 
-  useEffect(() => { if (!active) { setExtracting(false); setErr(null); } }, [active]);
+  const stopTimers = () => {
+    clearInterval(motionTimer.current); clearInterval(clockTimer.current);
+    motionTimer.current = clockTimer.current = null;
+  };
+  const stopAll = () => {
+    stopTimers();
+    try { if (recRef.current && recRef.current.state !== 'inactive') { recRef.current.onstop = null; recRef.current.stop(); } } catch(e){}
+    recRef.current = null;
+    streamRef.current?.getTracks().forEach(t=>t.stop()); streamRef.current = null;
+    setRecording(false); setPace(null);
+  };
 
-  const onVideo = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    e.target.value = '';
+  useEffect(() => {
+    if (!active) { stopAll(); setErr(null); setExtracting(false); return; }
+    if (frames.length) return; // reviewing frames — camera not needed
+    navigator.mediaDevices?.getUserMedia({ video:{ facingMode:'environment' }, audio:false })
+      .then(stream => { streamRef.current = stream; if (videoRef.current) videoRef.current.srcObject = stream; setCamOk(true); })
+      .catch(() => setCamOk(false));
+    return stopAll;
+  }, [active, frames.length === 0]);
+
+  // Pace coach: compare a tiny downsample of the current frame with the last
+  // one — big pixel delta = panning too fast, tiny delta = holding steady.
+  const sampleMotion = () => {
+    const v = videoRef.current; if (!v || !v.videoWidth) return;
+    if (!motionCanvas.current) motionCanvas.current = document.createElement('canvas');
+    const c = motionCanvas.current; c.width = 48; c.height = 32;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    try { ctx.drawImage(v, 0, 0, 48, 32); } catch(e) { return; }
+    let data;
+    try { data = ctx.getImageData(0, 0, 48, 32).data; } catch(e) { return; }
+    const prev = lastSample.current;
+    lastSample.current = data;
+    if (!prev) return;
+    let diff = 0, n = 0;
+    for (let i = 0; i < data.length; i += 16) { diff += Math.abs(data[i] - prev[i]); n++; }
+    const score = diff / n;
+    if (score > 26)     setPace({ level:'fast', msg:'Slow down — panning too fast' });
+    else if (score > 9) setPace({ level:'good', msg:'Good pace' });
+    else                setPace({ level:'hold', msg:'Holding — great for accuracy' });
+  };
+
+  const beginExtraction = (fileOrBlob) => {
+    stopAll();
     setErr(null); setFrames([]); setProg([0, 0]); setExtracting(true);
-    extractFrames(file, (done, total) => setProg([done, total]))
-      .then(fs => { setFrames(fs); setExtracting(false); })
+    extractFrames(fileOrBlob, (done, total) => setProg([done, total]))
+      .then(fs => {
+        if (!fs.length) { setErr('No readable frames in that video — try again.'); setExtracting(false); return; }
+        setFrames(fs); setExtracting(false);
+      })
       .catch(() => { setErr('Could not read that video — try a shorter clip (60–90 seconds works best).'); setExtracting(false); });
   };
+
+  const startRec = () => {
+    const stream = streamRef.current;
+    if (!stream || !window.MediaRecorder) { setCamOk(false); return; }
+    const mime = ['video/mp4','video/webm;codecs=vp9','video/webm'].find(t => MediaRecorder.isTypeSupported(t));
+    let rec;
+    try { rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined); }
+    catch(e) { setCamOk(false); return; }
+    const chunks = [];
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = () => beginExtraction(new Blob(chunks, { type: rec.mimeType || 'video/mp4' }));
+    recRef.current = rec;
+    secsRef.current = 0; setRecSecs(0); lastSample.current = null;
+    rec.start(1000);
+    setRecording(true);
+    motionTimer.current = setInterval(sampleMotion, 600);
+    clockTimer.current  = setInterval(() => {
+      secsRef.current += 1; setRecSecs(secsRef.current);
+      if (secsRef.current >= 120) stopRec(); // 2-minute cap
+    }, 1000);
+  };
+
+  const stopRec = () => {
+    try { if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop(); } catch(e){}
+  };
+
+  const onVideoFile = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    e.target.value = '';
+    beginExtraction(file);
+  };
+
+  const fmt = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  const paceSt  = pace ? PACE_STYLE[pace.level] : null;
+  const showCam = camOk && !extracting && frames.length === 0;
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',background:'var(--gray-50)'}}>
@@ -966,59 +1064,108 @@ function ScreenMoveCapture({ go, active, frames, setFrames }) {
         <button className="skid-btn skid-btn--ghost skid-btn--sm" style={{width:36,height:36,padding:0}} onClick={()=>go(0)}><IcoBack /></button>
         <span style={{fontWeight:700,fontSize:16,color:'var(--gray-800)'}}>Scan a Whole Move</span>
       </div>
-      <div style={{flex:1,padding:'20px 16px',overflow:'auto'}}>
-        <div style={{background:'var(--blue-50)',border:'1px solid var(--blue-200)',borderRadius:8,padding:'12px 14px',marginBottom:16}}>
-          <div style={{fontSize:12,fontWeight:700,color:'var(--blue-800)',marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
-            <LIcon name="video" size={14} /> How to film your walkthrough
+
+      {showCam ? (
+        <div className="cam">
+          <div className="cam-noise" />
+          <video ref={videoRef} autoPlay playsInline muted />
+          {recording && (
+            <div style={{position:'absolute',top:12,left:12,display:'flex',alignItems:'center',gap:7,background:'rgba(0,0,0,.65)',borderRadius:20,padding:'6px 13px'}}>
+              <span style={{width:8,height:8,borderRadius:'50%',background:'#e74c3c',animation:'rec-blink 1.2s infinite'}} />
+              <span style={{color:'#fff',fontSize:13,fontWeight:700}}>{fmt(recSecs)}</span>
+            </div>
+          )}
+          {!recording && (
+            <div style={{position:'absolute',top:'38%',left:'50%',transform:'translate(-50%,-50%)',background:'rgba(0,0,0,.7)',borderRadius:12,padding:'12px 18px',textAlign:'center',maxWidth:280,border:'1px solid rgba(255,255,255,.1)'}}>
+              <div style={{color:'#fff',fontWeight:700,fontSize:14,marginBottom:4}}>Walk slowly through each room</div>
+              <div style={{color:'rgba(255,255,255,.6)',fontSize:12,lineHeight:1.5}}>Hold on each big item for ~2 seconds. We'll coach your pace while you film.</div>
+            </div>
+          )}
+          {recording && pace && (
+            <div style={{position:'absolute',bottom:132,left:'50%',transform:'translateX(-50%)',display:'flex',alignItems:'center',gap:8,background:paceSt.bg,borderRadius:20,padding:'8px 16px',whiteSpace:'nowrap',transition:'background 300ms',color:'#fff'}}>
+              <LIcon name={paceSt.icon} size={15} />
+              <span style={{fontSize:13,fontWeight:700}}>{pace.msg}</span>
+            </div>
+          )}
+          <div className="cam-footer">
+            <div className="cam-ctrl" onClick={()=>go(0)} style={{fontSize:11,fontWeight:700}}>Cancel</div>
+            {recording ? (
+              <button className="shutter" onClick={stopRec}>
+                <div style={{width:28,height:28,borderRadius:6,background:'#e74c3c'}} />
+              </button>
+            ) : (
+              <button className="shutter" onClick={startRec}>
+                <div style={{width:60,height:60,borderRadius:'50%',background:'#e74c3c',border:'2.5px solid rgba(0,0,0,.08)'}} />
+              </button>
+            )}
+            <label className="cam-ctrl" title="Upload a video" style={{cursor:'pointer'}}>
+              <LIcon name="folder-open" size={20} />
+              <input type="file" accept="video/*" style={{display:'none'}} onChange={onVideoFile} />
+            </label>
           </div>
-          <p style={{fontSize:13,color:'var(--blue-900)',lineHeight:1.55,margin:0}}>
-            Walk slowly through each room, keeping items in frame for a couple of seconds. Pan across furniture, appliances, and anything going on the truck. 60–90 seconds total works best.
-          </p>
         </div>
-
-        <label className="skid-btn skid-btn--primary skid-btn--lg" style={{width:'100%',gap:10,cursor:'pointer',marginBottom:16}}>
-          <LIcon name="video" size={20} />{frames.length ? 'Record / Upload a Different Video' : 'Record or Upload Video'}
-          <input type="file" accept="video/*" capture="environment" style={{display:'none'}} onChange={onVideo} />
-        </label>
-
-        {err && (
-          <div className="skid-alert skid-alert--error" style={{marginBottom:16}}>
-            <IcoWarn />
-            <div className="skid-alert__body"><div className="skid-alert__text">{err}</div></div>
-          </div>
-        )}
-
-        {extracting && (
-          <div style={{marginBottom:16}}>
-            <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
-              <span style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>Extracting frames…</span>
-              <span style={{fontSize:13,fontWeight:700,color:'var(--blue-600)'}}>{prog[0]}/{prog[1]||'…'}</span>
-            </div>
-            <div className="skid-progress" style={{background:'var(--gray-300)'}}>
-              <span className="skid-progress__fill" style={{width:`${prog[1]?Math.round(prog[0]/prog[1]*100):5}%`,transition:'width 200ms ease'}} />
-            </div>
-          </div>
-        )}
-
-        {frames.length > 0 && !extracting && (
-          <>
-            <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.4px'}}>
-              {frames.length} frames captured <span style={{fontWeight:400,color:'var(--gray-500)',textTransform:'none',letterSpacing:0}}>(tap × to remove blurry ones)</span>
-            </p>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:16}}>
-              {frames.map((f,i)=>(
-                <div key={i} style={{position:'relative'}}>
-                  <img src={f} style={{width:'100%',aspectRatio:'4/3',objectFit:'cover',borderRadius:6,border:'1px solid var(--gray-300)',display:'block'}} />
-                  <button onClick={()=>setFrames(prev=>prev.filter((_,j)=>j!==i))}
-                    style={{position:'absolute',top:-5,right:-5,width:18,height:18,borderRadius:'50%',background:'rgba(200,30,30,.9)',color:'#fff',border:'2px solid #fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,lineHeight:1,padding:0}}>
-                    ×
-                  </button>
+      ) : (
+        <div style={{flex:1,padding:'20px 16px',overflow:'auto'}}>
+          {!camOk && !frames.length && !extracting && (
+            <>
+              <div style={{background:'var(--blue-50)',border:'1px solid var(--blue-200)',borderRadius:8,padding:'12px 14px',marginBottom:16}}>
+                <div style={{fontSize:12,fontWeight:700,color:'var(--blue-800)',marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
+                  <LIcon name="video" size={14} /> How to film your walkthrough
                 </div>
-              ))}
+                <p style={{fontSize:13,color:'var(--blue-900)',lineHeight:1.55,margin:0}}>
+                  Walk slowly through each room, holding each big item in frame for ~2 seconds. 60–90 seconds total works best.
+                </p>
+              </div>
+              <label className="skid-btn skid-btn--primary skid-btn--lg" style={{width:'100%',gap:10,cursor:'pointer',marginBottom:16}}>
+                <LIcon name="video" size={20} />Record or Upload Video
+                <input type="file" accept="video/*" capture="environment" style={{display:'none'}} onChange={onVideoFile} />
+              </label>
+            </>
+          )}
+
+          {err && (
+            <div className="skid-alert skid-alert--error" style={{marginBottom:16}}>
+              <IcoWarn />
+              <div className="skid-alert__body"><div className="skid-alert__text">{err}</div></div>
             </div>
-          </>
-        )}
-      </div>
+          )}
+
+          {extracting && (
+            <div style={{marginBottom:16}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+                <span style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>Extracting frames…</span>
+                <span style={{fontSize:13,fontWeight:700,color:'var(--blue-600)'}}>{prog[0]}/{prog[1]||'…'}</span>
+              </div>
+              <div className="skid-progress" style={{background:'var(--gray-300)'}}>
+                <span className="skid-progress__fill" style={{width:`${prog[1]?Math.round(prog[0]/prog[1]*100):5}%`,transition:'width 200ms ease'}} />
+              </div>
+            </div>
+          )}
+
+          {frames.length > 0 && !extracting && (
+            <>
+              <p style={{fontSize:13,fontWeight:700,color:'var(--gray-700)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.4px'}}>
+                {frames.length} frames captured <span style={{fontWeight:400,color:'var(--gray-500)',textTransform:'none',letterSpacing:0}}>(tap × to remove blurry ones)</span>
+              </p>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:16}}>
+                {frames.map((f,i)=>(
+                  <div key={i} style={{position:'relative'}}>
+                    <img src={f} style={{width:'100%',aspectRatio:'4/3',objectFit:'cover',borderRadius:6,border:'1px solid var(--gray-300)',display:'block'}} />
+                    <button onClick={()=>setFrames(prev=>prev.filter((_,j)=>j!==i))}
+                      style={{position:'absolute',top:-5,right:-5,width:18,height:18,borderRadius:'50%',background:'rgba(200,30,30,.9)',color:'#fff',border:'2px solid #fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,lineHeight:1,padding:0}}>
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button className="skid-btn skid-btn--tertiary skid-btn--md" style={{gap:8}} onClick={()=>{ setFrames([]); setErr(null); }}>
+                <LIcon name="video" size={16} />Record a different video
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {frames.length > 0 && !extracting && (
         <div style={{padding:'12px 16px',background:'var(--gray-0)',borderTop:'1px solid var(--gray-200)'}}>
           <button className="skid-btn skid-btn--primary skid-btn--lg" style={{width:'100%'}} onClick={()=>go(7)}>
@@ -1051,7 +1198,7 @@ function ScreenMoveProcessing({ go, active, frames, onInventory }) {
       .then(data=>{
         clearInterval(advance); setStep(steps.length-1);
         if (data.error) { setError(data.error); return; }
-        const items = (data.items||[]).map((it,i)=>({ id:i, qty:1, crew:1, material:'unknown', ...it }));
+        const items = (data.items||[]).map((it,i)=>({ id:i, qty:1, crew:1, material:'unknown', confidence:75, ...it }));
         if (!items.length) { setError('No items detected in the video. Try filming closer to the items.'); return; }
         setTimeout(()=>{ onInventory(items); go(8); }, 600);
       })
@@ -1133,6 +1280,9 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
   }));
   const setCrewN  = (id, n)  => setInventory(prev => prev.map(it => it.id===id ? {...it, crew:n} : it));
   const removeIt  = (id)     => { setInventory(prev => prev.filter(it => it.id!==id)); if(openId===id) setOpenId(null); };
+  const setField  = (id, f, val) => setInventory(prev => prev.map(it =>
+    it.id===id ? { ...it, [f]: val==='' ? '' : Math.max(0, parseFloat(val)||0), ...(f!=='qty'?{confidence:100}:{}) } : it
+  ));
 
   const post = () => {
     const rooms = [...new Set(inventory.map(it=>it.room).filter(r=>r && r!=='Unknown'))];
@@ -1164,18 +1314,26 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
       </div>
 
       <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
-        <p style={{fontSize:12,color:'var(--gray-500)',marginBottom:10}}>Tap an item to adjust its material or crew — weights update automatically. Remove anything that isn't shipping.</p>
+        <p style={{fontSize:12,color:'var(--gray-500)',marginBottom:10}}>Tap an item to adjust its size, material, or crew. Anything flagged orange is a low-confidence guess — worth a quick check.</p>
         {inventory.map(it=>{
           const open = openId===it.id;
           const mat = MAT_BY_ID[it.material] || MAT_BY_ID.unknown;
+          const low = (it.confidence ?? 75) < 70;
           return (
-            <div key={it.id} className="skid-card" style={{marginBottom:8,padding:0,overflow:'hidden'}}>
+            <div key={it.id} className="skid-card" style={{marginBottom:8,padding:0,overflow:'hidden',border: low?'1.5px solid var(--orange-300)':undefined}}>
               <div onClick={()=>setOpenId(open?null:it.id)} style={{display:'flex',gap:10,padding:'12px',alignItems:'center',cursor:'pointer'}}>
-                <div style={{width:36,height:36,borderRadius:8,background:'var(--blue-50)',color:'var(--blue-700)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                <div style={{width:36,height:36,borderRadius:8,background:low?'var(--orange-50)':'var(--blue-50)',color:low?'var(--orange-700)':'var(--blue-700)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                   <LIcon name={mat.icon} size={18} />
                 </div>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:14,color:'var(--gray-800)'}}>{it.itemType}{(it.qty||1)>1?` ×${it.qty}`:''}</div>
+                  <div style={{fontWeight:700,fontSize:14,color:'var(--gray-800)',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                    {it.itemType}{(it.qty||1)>1?` ×${it.qty}`:''}
+                    {low && (
+                      <span style={{fontSize:10,fontWeight:700,background:'var(--orange-100)',color:'var(--orange-800)',borderRadius:4,padding:'2px 6px',textTransform:'uppercase',letterSpacing:'.3px',display:'inline-flex',alignItems:'center',gap:3}}>
+                        <LIcon name="eye" size={10} />Check · {it.confidence}%
+                      </span>
+                    )}
+                  </div>
                   <div style={{fontSize:12,color:'var(--gray-500)'}}>{it.room} · {it.width}"×{it.height}"×{it.depth}" · ~{it.weightLbs} lbs{(it.qty||1)>1?' each':''}</div>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0,color:'var(--gray-400)'}}>
@@ -1185,6 +1343,18 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
               </div>
               {open && (
                 <div style={{padding:'0 12px 12px',borderTop:'1px solid var(--gray-100)'}}>
+                  <p style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px',margin:'10px 0 6px'}}>
+                    Size & weight{low && <span style={{color:'var(--orange-700)',textTransform:'none',letterSpacing:0,fontWeight:600}}> — double-check these</span>}
+                  </p>
+                  <div style={{display:'flex',gap:6,marginBottom:4}}>
+                    {[['width','W (in)'],['height','H (in)'],['depth','D (in)'],['weightLbs','Lbs']].map(([f,lbl])=>(
+                      <label key={f} style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:10,fontWeight:700,color:'var(--gray-500)',marginBottom:3,textTransform:'uppercase',letterSpacing:'.3px'}}>{lbl}</div>
+                        <input type="number" inputMode="decimal" min="0" value={it[f] ?? ''} onChange={e=>setField(it.id,f,e.target.value)}
+                          style={{width:'100%',height:36,border:'1px solid var(--gray-300)',borderRadius:6,padding:'0 8px',fontSize:14,fontWeight:700,color:'var(--gray-800)',background:'var(--gray-0)',fontFamily:'var(--font-sans)'}} />
+                      </label>
+                    ))}
+                  </div>
                   <p style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px',margin:'10px 0 6px'}}>Material</p>
                   <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
                     {MATERIALS.map(m=>(

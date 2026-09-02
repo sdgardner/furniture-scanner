@@ -168,11 +168,23 @@ For each item:
 - Pick the dominant material from EXACTLY this list: wood, upholstered, particleboard, metal, castiron, marble, glass, unknown.
 - Estimate movers needed: 1, 2, or 3 (3 means 3+).
 - Name the room it was seen in (e.g. "Living Room", "Bedroom", "Garage"). If unclear, use "Unknown".
+- Give a per-item confidence 0-100 covering BOTH the identification and the measurements. Be honest: an item seen only once, partially, blurry, or at a weird angle should score below 70.
+
+MEASUREMENT DISCIPLINE — once you identify what an item IS, snap its dimensions to that item type's standard manufactured size instead of pure visual guessing. Most furniture comes in standard sizes:
+- Sofas: 72-90"W × 30-36"D × 30-36"H; loveseats 52-64"W
+- Soundbars: 2-4"H × 35-48"W × 3-5"D — they are LOW and WIDE, never taller than ~5"
+- TV / media consoles: 58-70"W × 15-20"D × 20-30"H
+- Desks 29-30"H; dining tables 28-30"H; coffee tables 16-18"H; side tables 22-26"H
+- Bookcases 11-13"D × 24-36"W; filing cabinets 15"W × 28"D (2-drawer 28"H, 4-drawer 52"H)
+- Office chairs ~26×26", 38-45"H; dressers 30-36"H × 58-64"W (long) or 44-50"H × 36-40"W (tall)
+- TVs: judge the diagonal (43/50/55/65/75" are standard) — a 65" TV is ~57"W × 33"H × 3"D
+- Refrigerators 30-36"W × 66-70"H; washers/dryers 27"W × 38-43"H; mattresses: twin 38×75, full 54×75, queen 60×80, king 76×80
+Use pure visual estimation only for items with no standard size.
 
 Respond with ONLY valid JSON, no markdown, no code fences:
 {
   "items": [
-    { "itemType": "specific item name", "room": "Living Room", "qty": 1, "width": <inches>, "height": <inches>, "depth": <inches>, "weightLbs": <lbs>, "material": "wood", "crew": 1, "fragility": "Low | Medium | High" }
+    { "itemType": "specific item name", "room": "Living Room", "qty": 1, "width": <inches>, "height": <inches>, "depth": <inches>, "weightLbs": <lbs>, "material": "wood", "crew": 1, "fragility": "Low | Medium | High", "confidence": <0-100> }
   ],
   "confidence": <overall confidence 0-100>
 }
