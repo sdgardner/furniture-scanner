@@ -277,6 +277,34 @@ function extractFrames(file, onProgress, maxFrames = 20) {
   });
 }
 
+// Crop a padded thumbnail out of a frame using the model's approximate box (percent coords)
+function cropThumb(frameDataUrl, box) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const W = img.width, H = img.height;
+      let sx = 0, sy = 0, sw = W, sh = H;
+      if (box && box.w > 0 && box.h > 0) {
+        const padX = (box.w / 100) * 0.25 + 0.03;   // generous padding — boxes are approximate
+        const padY = (box.h / 100) * 0.25 + 0.03;
+        sx = Math.max(0, (box.x / 100 - padX)) * W;
+        sy = Math.max(0, (box.y / 100 - padY)) * H;
+        sw = Math.min(W - sx, (box.w / 100 + padX * 2) * W);
+        sh = Math.min(H - sy, (box.h / 100 + padY * 2) * H);
+        if (sw < W * 0.08 || sh < H * 0.08) { sx = 0; sy = 0; sw = W; sh = H; } // box too tiny to trust
+      }
+      const scale = Math.min(1, 200 / Math.max(sw, sh));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(sw * scale));
+      c.height = Math.max(1, Math.round(sh * scale));
+      c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+      resolve(c.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = () => resolve(null);
+    img.src = frameDataUrl;
+  });
+}
+
 function crewInfo(weightLbs, itemType) {
   const bulky = /sofa|sectional|couch|armoire|wardrobe|piano|cabinet/i.test(itemType||'');
   if (weightLbs >= 100 || bulky) return { count: 2, label: '2+ people required', color: 'var(--orange-600)' };
@@ -1206,7 +1234,14 @@ function ScreenMoveProcessing({ go, active, frames, onInventory }) {
         if (data.error) { setError(data.error); return; }
         const items = (data.items||[]).map((it,i)=>({ id:i, qty:1, crew:1, material:'unknown', confidence:75, ...it }));
         if (!items.length) { setError('No items detected in the video. Try filming closer to the items.'); return; }
-        setTimeout(()=>{ onInventory(items); go(8); }, 600);
+        // Cut a thumbnail for each item from the frame the model says shows it best
+        Promise.all(items.map(it => {
+          const frame = frames[it.frameIndex] ?? frames[0];
+          if (!frame) return Promise.resolve(it);
+          return cropThumb(frame, it.box).then(thumb => ({ ...it, thumb }));
+        })).then(withThumbs => {
+          setTimeout(()=>{ onInventory(withThumbs); go(8); }, 300);
+        });
       })
       .catch(()=>{ clearInterval(advance); setError('Could not reach the server. Please try again.'); });
     return ()=>clearInterval(advance);
@@ -1306,15 +1341,18 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
         .then(r => r.json())
         .then(data => {
           if (data.error) { setRescanErr(data.error); return; }
-          setInventory(prev => prev.map(x => x.id===id ? {
-            ...x,
-            itemType:  data.itemType  || x.itemType,
-            width:     data.width     ?? x.width,
-            height:    data.height    ?? x.height,
-            depth:     data.depth     ?? x.depth,
-            weightLbs: data.weightLbs ?? x.weightLbs,
-            confidence: data.confidence ?? 90,
-          } : x));
+          cropThumb(img, null).then(thumb => {
+            setInventory(prev => prev.map(x => x.id===id ? {
+              ...x,
+              itemType:  data.itemType  || x.itemType,
+              width:     data.width     ?? x.width,
+              height:    data.height    ?? x.height,
+              depth:     data.depth     ?? x.depth,
+              weightLbs: data.weightLbs ?? x.weightLbs,
+              confidence: data.confidence ?? 90,
+              thumb:     thumb || x.thumb,
+            } : x));
+          });
         })
         .catch(() => setRescanErr('Could not reach the server — try again.'))
         .finally(() => setRescanId(null));
@@ -1360,9 +1398,14 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
           return (
             <div key={it.id} className="skid-card" style={{marginBottom:8,padding:0,overflow:'hidden',border: low?'1.5px solid var(--orange-300)':undefined}}>
               <div onClick={()=>setOpenId(open?null:it.id)} style={{display:'flex',gap:10,padding:'12px',alignItems:'center',cursor:'pointer'}}>
-                <div style={{width:36,height:36,borderRadius:8,background:low?'var(--orange-50)':'var(--blue-50)',color:low?'var(--orange-700)':'var(--blue-700)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                  <LIcon name={mat.icon} size={18} />
-                </div>
+                {it.thumb ? (
+                  <img src={it.thumb} alt={it.itemType}
+                    style={{width:44,height:44,borderRadius:8,objectFit:'cover',flexShrink:0,border:low?'1.5px solid var(--orange-300)':'1px solid var(--gray-200)'}} />
+                ) : (
+                  <div style={{width:44,height:44,borderRadius:8,background:low?'var(--orange-50)':'var(--blue-50)',color:low?'var(--orange-700)':'var(--blue-700)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <LIcon name={mat.icon} size={20} />
+                  </div>
+                )}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:700,fontSize:14,color:'var(--gray-800)',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
                     {it.itemType}{(it.qty||1)>1?` ×${it.qty}`:''}

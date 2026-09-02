@@ -200,7 +200,7 @@ Respond with ONLY valid JSON, no markdown, no code fences. The "analysis" field 
 {
   "analysis": "3-5 sentences: which rooms the walkthrough covers, which scale anchors you found (doorways, outlets, countertops, known-size items like TVs whose diagonal you can judge), and roughly how many pixels-per-inch those anchors imply in typical frames. Note any items you could only glimpse.",
   "items": [
-    { "itemType": "specific item name", "room": "Living Room", "qty": 1, "width": <inches>, "height": <inches>, "depth": <inches>, "weightLbs": <lbs>, "material": "wood", "crew": 1, "fragility": "Low | Medium | High", "confidence": <0-100> }
+    { "itemType": "specific item name", "room": "Living Room", "qty": 1, "width": <inches>, "height": <inches>, "depth": <inches>, "weightLbs": <lbs>, "material": "wood", "crew": 1, "fragility": "Low | Medium | High", "confidence": <0-100>, "frameIndex": <0-based index of the single frame where this item is most clearly visible — frames are numbered 0 to ${frameList.length - 1} in the order given>, "box": { "x": <left edge as % of frame width 0-100>, "y": <top edge as % of frame height 0-100>, "w": <width %>, "h": <height %> } }
   ],
   "confidence": <overall confidence 0-100>
 }
