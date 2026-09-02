@@ -174,16 +174,25 @@ For each item:
 - Name the room it was seen in (e.g. "Living Room", "Bedroom", "Garage"). If unclear, use "Unknown".
 - Give a per-item confidence 0-100 covering BOTH the identification and the measurements. Be honest: an item seen only once, partially, blurry, or at a weird angle should score below 70.
 
-MEASUREMENT DISCIPLINE — once you identify what an item IS, snap its dimensions to that item type's standard manufactured size instead of pure visual guessing. Most furniture comes in standard sizes:
-- Sofas: 72-90"W × 30-36"D × 30-36"H; loveseats 52-64"W
-- Soundbars: 2-4"H × 35-48"W × 3-5"D — they are LOW and WIDE, never taller than ~5"
-- TV / media consoles: 58-70"W × 15-20"D × 20-30"H
-- Desks 29-30"H; dining tables 28-30"H; coffee tables 16-18"H; side tables 22-26"H
-- Bookcases 11-13"D × 24-36"W; filing cabinets 15"W × 28"D (2-drawer 28"H, 4-drawer 52"H)
-- Office chairs ~26×26", 38-45"H; dressers 30-36"H × 58-64"W (long) or 44-50"H × 36-40"W (tall)
-- TVs: judge the diagonal (43/50/55/65/75" are standard) — a 65" TV is ~57"W × 33"H × 3"D
+MEASUREMENT DISCIPLINE — most item types come in a FAMILY of standard manufactured sizes. Your job is a two-step process:
+(1) identify the item type to get its size family, then
+(2) use your visual scale anchors (doorways, outlets, countertops, adjacent items) to pick WHICH member of the family this one is.
+NEVER default to the most common or middle size — that is the #1 error. A desk identified without careful anchor comparison gets called 60×30 when it is actually a compact 48×24. Compare the item's width to the nearest doorway or desk chair before choosing.
+
+Size families:
+- Desks: compact 40×20, small 48×24, standard 60×30, large 66×30, executive 72×36 (all 29-30"H)
+- Sofas: loveseat 52-64"W, apartment 68-76"W, standard 78-88"W (30-36"D, 30-36"H)
+- Posters/banners/framed art: 12×18, 18×24, 24×36, 27×40 — judge against nearby outlets/switches (4.5"H)
+- Soundbars: compact 24-32"W, standard 35-45"W (always 2-4"H, 3-5"D)
+- TV / media consoles: small 47-58"W, standard 58-70"W (15-20"D, 20-30"H)
+- Bookcases: 24/30/36"W × 11-13"D; heights 30/48/72"
+- Filing cabinets: 15"W × 28"D; 2-drawer 28"H, 4-drawer 52"H; lateral files 30/36/42"W
+- TVs: judge the diagonal against the console below (43/50/55/65/75") — a 65" TV is ~57"W × 33"H × 3"D
+- Dining tables 28-30"H; coffee tables 16-18"H; office chairs ~26×26", 38-45"H
 - Refrigerators 30-36"W × 66-70"H; washers/dryers 27"W × 38-43"H; mattresses: twin 38×75, full 54×75, queen 60×80, king 76×80
-Use pure visual estimation only for items with no standard size.
+
+BIAS WARNING: visual estimates systematically skew LARGE, especially for items seen at an angle or filling the frame. When your anchors leave you torn between two sizes in a family, pick the SMALLER one. In offices and homes, the compact variant is more common than the showroom variant.
+Use pure visual estimation only for items with no standard size, and apply the same skew-small correction.
 
 Respond with ONLY valid JSON, no markdown, no code fences. The "analysis" field comes FIRST — establish your scale anchors there BEFORE estimating any item:
 {
