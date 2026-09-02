@@ -22,6 +22,7 @@ app.post('/detect', async (req, res) => {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 5,
+      temperature: 0,
       messages: [{
         role: 'user',
         content: [
@@ -66,6 +67,7 @@ app.post('/analyze', async (req, res) => {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 1024,
+      temperature: 0,
       messages: [{
         role: 'user',
         content: [
@@ -99,8 +101,9 @@ STEP 4 — For machinery, recommend the appropriate trailer:
 - "lowboy": ONLY for full-size heavy equipment that is too tall for a standard flatbed — large excavators (CAT 320 and up, 20+ tons), large cranes, large bulldozers (D6 and up). A mini excavator like a CAT 305E or 308 is a FLATBED, not a lowboy.
 - "RGN": extremely oversized or overweight loads over 48,000 lbs requiring a detachable neck for drive-on loading
 
-Respond with ONLY valid JSON, no markdown, no code fences:
+Respond with ONLY valid JSON, no markdown, no code fences. The "analysis" field comes FIRST — work through your scale reasoning there BEFORE committing to any numbers:
 {
+  "analysis": "2-4 sentences: what the item is, which visual scale references you found (doorway, outlet, known-size objects), and how you derived the dimensions from them. If you matched a standard manufactured size, say which.",
   "itemCategory": "furniture" or "machinery",
   "itemType": "specific name of the item",
   "brand": "manufacturer brand name if identifiable (e.g. 'Caterpillar', 'John Deere', 'Kubota', 'Bobcat') or null",
@@ -147,7 +150,8 @@ app.post('/inventory', async (req, res) => {
   try {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
+      max_tokens: 6000,
+      temperature: 0,
       messages: [{
         role: 'user',
         content: [
@@ -181,13 +185,15 @@ MEASUREMENT DISCIPLINE — once you identify what an item IS, snap its dimension
 - Refrigerators 30-36"W × 66-70"H; washers/dryers 27"W × 38-43"H; mattresses: twin 38×75, full 54×75, queen 60×80, king 76×80
 Use pure visual estimation only for items with no standard size.
 
-Respond with ONLY valid JSON, no markdown, no code fences:
+Respond with ONLY valid JSON, no markdown, no code fences. The "analysis" field comes FIRST — establish your scale anchors there BEFORE estimating any item:
 {
+  "analysis": "3-5 sentences: which rooms the walkthrough covers, which scale anchors you found (doorways, outlets, countertops, known-size items like TVs whose diagonal you can judge), and roughly how many pixels-per-inch those anchors imply in typical frames. Note any items you could only glimpse.",
   "items": [
     { "itemType": "specific item name", "room": "Living Room", "qty": 1, "width": <inches>, "height": <inches>, "depth": <inches>, "weightLbs": <lbs>, "material": "wood", "crew": 1, "fragility": "Low | Medium | High", "confidence": <0-100> }
   ],
   "confidence": <overall confidence 0-100>
 }
+Cross-check every item against its scale anchor AND against neighboring items — a soundbar cannot be taller than the TV console it sits on; a desk cannot be taller than the person-height doorway behind it. Fix any inconsistency before answering.
 If no shippable items are visible in any frame, return: {"error": "No items detected"}`
           }
         ]
