@@ -755,7 +755,10 @@ function ScreenProcessing({ go, active, images, category, materials, crew, condi
 }
 
 /* ── SCREEN 4 · RESULTS ─────────────────────────────────────────────────── */
-function ScreenResults({ go, units, showConfidence, result }) {
+function ScreenResults({ go, units, showConfidence, result, onUpdate }) {
+  const [editDim, setEditDim]   = useState(null);   // 'width' | 'height' | 'depth'
+  const [editVal, setEditVal]   = useState('');
+  const [scaleAsk, setScaleAsk] = useState(null);   // { field, ratio }
   if (!result) return null;
   const u = units==='cm';
   const W  = u?Math.round(result.width *2.54)+' cm':result.width+'"';
@@ -770,6 +773,30 @@ function ScreenResults({ go, units, showConfidence, result }) {
   const crewLabel   = crewCount===1 ? '1 person can manage' : crewCount===2 ? '2 people needed' : '3+ people needed';
   const crewHeavy   = crewCount >= 2;
   const mainImg     = result.images?.[0];
+
+  // One tape-measured dimension re-anchors the whole item: the model gets
+  // proportions right far more often than absolute scale.
+  const commitEdit = () => {
+    const field = editDim;
+    setEditDim(null);
+    const raw = parseFloat(editVal);
+    if (!field || !raw || raw <= 0) return;
+    const inches = u ? raw / 2.54 : raw;
+    const old = result[field];
+    if (!old || Math.abs(inches - old) < 0.5) return;
+    const ratio = inches / old;
+    onUpdate({ ...result, [field]: Math.round(inches), weightLbs: Math.max(1, Math.round(result.weightLbs * ratio)) });
+    setScaleAsk({ field, ratio });
+  };
+  const applyProportional = () => {
+    const { field, ratio } = scaleAsk;
+    const upd = { ...result };
+    ['width','height','depth'].forEach(f => { if (f !== field) upd[f] = Math.max(1, Math.round(result[f] * ratio)); });
+    upd.weightLbs  = Math.max(1, Math.round(result.weightLbs * ratio * ratio)); // volume scales with all three axes
+    upd.confidence = Math.min(99, Math.max(result.confidence || 0, 95));
+    onUpdate(upd);
+    setScaleAsk(null);
+  };
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',background:'#111'}}>
@@ -893,14 +920,37 @@ function ScreenResults({ go, units, showConfidence, result }) {
           </div>
         )}
 
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:14}}>
-          {[['Width',W],['Height',H],['Depth',D]].map(([lbl,val])=>(
-            <div key={lbl} className="stat-cell">
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:6}}>
+          {[['Width','width',W],['Height','height',H],['Depth','depth',D]].map(([lbl,field,val])=>(
+            <div key={field} className="stat-cell" style={{cursor:'pointer'}}
+              onClick={()=>{ if(editDim!==field){ setEditDim(field); setEditVal(String(u?Math.round(result[field]*2.54):result[field])); setScaleAsk(null); } }}>
               <div style={{fontSize:10,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.4px',marginBottom:4}}>{lbl}</div>
-              <div style={{fontSize:17,fontWeight:700,color:'var(--gray-800)'}}>{val}</div>
+              {editDim===field ? (
+                <input autoFocus type="number" inputMode="decimal" value={editVal}
+                  onChange={e=>setEditVal(e.target.value)}
+                  onBlur={commitEdit}
+                  onKeyDown={e=>{ if(e.key==='Enter') e.target.blur(); }}
+                  style={{width:'100%',fontSize:16,fontWeight:700,color:'var(--gray-800)',border:'1.5px solid var(--blue-400)',borderRadius:5,textAlign:'center',padding:'1px 2px',background:'var(--gray-0)',fontFamily:'var(--font-sans)'}} />
+              ) : (
+                <div style={{fontSize:17,fontWeight:700,color:'var(--gray-800)'}}>{val}</div>
+              )}
             </div>
           ))}
         </div>
+        <p style={{fontSize:11,color:'var(--gray-500)',margin:'0 0 14px'}}>Off? Tap a dimension and enter the real measurement — we'll offer to rescale the rest to match.</p>
+
+        {scaleAsk && (
+          <div style={{background:'var(--blue-50)',border:'1px solid var(--blue-200)',borderRadius:8,padding:'10px 12px',marginBottom:14}}>
+            <div style={{fontSize:13,fontWeight:700,color:'var(--blue-800)',marginBottom:6}}>Keep the item's proportions?</div>
+            <div style={{fontSize:12,color:'var(--blue-900)',marginBottom:10,lineHeight:1.5}}>
+              Scans usually get the shape right but the scale wrong. Scale the other two dimensions by the same amount ({scaleAsk.ratio>1?'+':''}{Math.round((scaleAsk.ratio-1)*100)}%)? Weight adjusts too.
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button className="skid-btn skid-btn--secondary skid-btn--sm" onClick={applyProportional}>Yes, rescale all</button>
+              <button className="skid-btn skid-btn--tertiary skid-btn--sm" onClick={()=>setScaleAsk(null)}>Just this one</button>
+            </div>
+          </div>
+        )}
 
         <div className="skid-alert skid-alert--warning" style={{marginBottom:14}}>
           <IcoWarn />
@@ -1551,7 +1601,7 @@ function App() {
             <ScreenCapture go={go} active={screen===1} images={images} setImages={setImages} />,
             <ScreenMaterial go={go} detecting={detecting} category={category} setCategory={setCategory} materials={materials} setMaterials={setMaterials} crew={crew} setCrew={setCrew} condition={condition} setCondition={setCondition} />,
             <ScreenProcessing go={go} active={screen===3} images={images} category={category} materials={materials} crew={crew} condition={condition} onResult={onResult} />,
-            <ScreenResults go={go} units={t.units} showConfidence={t.showConfidence} result={result} />,
+            <ScreenResults go={go} units={t.units} showConfidence={t.showConfidence} result={result} onUpdate={setResult} />,
             <ScreenNextSteps go={go} result={result} />,
             <ScreenMoveCapture go={go} active={screen===6} frames={moveFrames} setFrames={setMoveFrames} />,
             <ScreenMoveProcessing go={go} active={screen===7} frames={moveFrames} onInventory={setInventory} />,
