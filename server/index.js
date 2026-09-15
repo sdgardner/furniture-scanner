@@ -30,7 +30,7 @@ BIAS WARNING: visual estimates systematically skew LARGE, especially for items s
 Use pure visual estimation only for items with no standard size, and apply the same skew-small correction.`;
 
 
-app.get('/health', (req, res) => res.json({ ok: true }));
+app.get('/health', (req, res) => res.json({ ok: true, version: 'photo-scan-restored-2026-09-15' }));
 
 app.post('/detect', async (req, res) => {
   const { images, image } = req.body;
