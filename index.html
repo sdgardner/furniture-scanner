@@ -1336,7 +1336,11 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
       const matLabel = it && it.material !== 'unknown' ? MAT_BY_ID[it.material]?.label : null;
       fetch(`${API_URL}/analyze`, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ images:[img], materials: matLabel ? [matLabel] : [] }),
+        body: JSON.stringify({
+          images:[img],
+          materials: matLabel ? [matLabel] : [],
+          rescanContext: it ? { itemType: it.itemType, width: it.width, height: it.height, depth: it.depth } : undefined,
+        }),
       })
         .then(r => r.json())
         .then(data => {
@@ -1466,6 +1470,9 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
                       <LIcon name="trash-2" size={14} />Remove
                     </button>
                   </div>
+                  <p style={{fontSize:11,color:'var(--gray-500)',marginTop:6,lineHeight:1.5}}>
+                    For an accurate rescan: step back so the whole item fits in frame, and include something of known size — a sheet of paper on it, a soda can beside it, or a doorway edge in the shot. A tight close-up alone can't tell us size.
+                  </p>
                   {rescanId===it.id && (
                     <p style={{fontSize:12,color:'var(--blue-700)',marginTop:8,display:'flex',alignItems:'center',gap:6}}>
                       <span style={{width:8,height:8,borderRadius:'50%',background:'var(--blue-500)',animation:'rec-blink 1s infinite'}} />
