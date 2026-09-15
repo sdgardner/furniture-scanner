@@ -165,6 +165,26 @@ function LIcon({ name, size=20 }) {
 }
 
 /* ── HELPERS ────────────────────────────────────────────────────────────── */
+// Native AR bridge — present only when running inside the iOS shell app
+const HAS_AR = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.arMeasure);
+function startARMeasure(onResult) {
+  window.__arMeasureResult = (r) => { window.__arMeasureResult = null; onResult(r || {}); };
+  window.__arMeasureCancel = () => { window.__arMeasureResult = null; };
+  window.webkit.messageHandlers.arMeasure.postMessage({});
+}
+// Apply AR-measured dims to an object, scaling weight by the volume change
+function applyARDims(obj, r) {
+  const upd = { ...obj };
+  const oldVol = (obj.width * obj.height * obj.depth) || 0;
+  if (r.width)  upd.width  = Math.round(r.width);
+  if (r.height) upd.height = Math.round(r.height);
+  if (r.depth)  upd.depth  = Math.round(r.depth);
+  const newVol = (upd.width * upd.height * upd.depth) || 0;
+  if (oldVol > 0 && newVol > 0) upd.weightLbs = Math.max(1, Math.round(obj.weightLbs * newVol / oldVol));
+  upd.confidence = 99;
+  return upd;
+}
+
 // Resize + compress to stay under Claude's 10MB image limit
 function compressImage(dataUrl, maxDim = 1600, quality = 0.75) {
   return new Promise(resolve => {
@@ -939,6 +959,13 @@ function ScreenResults({ go, units, showConfidence, result, onUpdate }) {
         </div>
         <p style={{fontSize:11,color:'var(--gray-500)',margin:'0 0 14px'}}>Off? Tap a dimension and enter the real measurement — we'll offer to rescale the rest to match.</p>
 
+        {HAS_AR && (
+          <button className="skid-btn skid-btn--secondary skid-btn--md" style={{width:'100%',gap:8,marginBottom:14}}
+            onClick={()=>startARMeasure(r => onUpdate(applyARDims(result, r)))}>
+            <LIcon name="ruler" size={16} />Measure with AR
+          </button>
+        )}
+
         {scaleAsk && (
           <div style={{background:'var(--blue-50)',border:'1px solid var(--blue-200)',borderRadius:8,padding:'10px 12px',marginBottom:14}}>
             <div style={{fontSize:13,fontWeight:700,color:'var(--blue-800)',marginBottom:6}}>Keep the item's proportions?</div>
@@ -1512,6 +1539,12 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
                       <input type="file" accept="image/*" capture="environment" style={{display:'none'}} disabled={rescanId!==null}
                         onChange={e=>{ const f=e.target.files[0]; e.target.value=''; if(f) rescanPhoto(it.id, f); }} />
                     </label>
+                    {HAS_AR && (
+                      <button className="skid-btn skid-btn--secondary skid-btn--sm" style={{gap:6}}
+                        onClick={()=>startARMeasure(r => setInventory(prev => prev.map(x => x.id===it.id ? applyARDims(x, r) : x)))}>
+                        <LIcon name="ruler" size={14} />Measure with AR
+                      </button>
+                    )}
                     <button onClick={()=>removeIt(it.id)} className="skid-btn skid-btn--ghost skid-btn--sm" style={{color:'var(--red-600, #c0392b)',gap:6}}>
                       <LIcon name="trash-2" size={14} />Remove
                     </button>
