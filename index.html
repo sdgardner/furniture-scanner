@@ -1336,11 +1336,7 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
       const matLabel = it && it.material !== 'unknown' ? MAT_BY_ID[it.material]?.label : null;
       fetch(`${API_URL}/analyze`, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          images:[img],
-          materials: matLabel ? [matLabel] : [],
-          rescanContext: it ? { itemType: it.itemType } : undefined,
-        }),
+        body: JSON.stringify({ images:[img], materials: matLabel ? [matLabel] : [] }),
       })
         .then(r => r.json())
         .then(data => {

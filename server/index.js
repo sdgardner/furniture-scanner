@@ -29,10 +29,6 @@ Size families:
 BIAS WARNING: visual estimates systematically skew LARGE, especially for items seen at an angle or filling the frame. When your anchors leave you torn between two sizes in a family, pick the SMALLER one. In offices and homes, the compact variant is more common than the showroom variant.
 Use pure visual estimation only for items with no standard size, and apply the same skew-small correction.`;
 
-// Video-frame estimates skew large; deliberately-framed photos don't. Only the
-// walkthrough inventory gets the skew-small correction.
-const SIZE_FAMILIES_PHOTO = SIZE_FAMILIES.split('BIAS WARNING:')[0]
-  + 'Use the size family as a menu to choose from with your scale evidence — never as a reason to override clear visual measurements. Items with no standard size: pure visual estimation.';
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
@@ -68,7 +64,7 @@ app.post('/detect', async (req, res) => {
 });
 
 app.post('/analyze', async (req, res) => {
-  const { images, image, category, materials, material, materialDensity, condition, rescanContext } = req.body;
+  const { images, image, category, materials, material, materialDensity, condition } = req.body;
 
   const photoList = images?.length ? images : image ? [image] : [];
   if (!photoList.length) return res.status(400).json({ error: 'No image provided' });
@@ -89,22 +85,17 @@ app.post('/analyze', async (req, res) => {
     ? `\nYou have ${photoList.length} photos — use them together for better depth/width/height estimates.`
     : '';
 
-  const rescanNote = rescanContext?.itemType
-    ? `\nCONTEXT — the user is RE-scanning an item that a room walkthrough identified as: "${rescanContext.itemType}". They are rescanning because the previous measurement seemed WRONG, so do NOT assume any prior estimate is correct. Measure this item INDEPENDENTLY from this photo: find scale references (doorway, outlet, floor line, known-size objects like paper or cans), derive the dimensions from them, and cross-check against the item's standard size family. If the photo truly has no scale reference, choose the family member that best matches the item's visible proportions.`
-    : '';
-
   try {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 1024,
-      temperature: 0,
       messages: [{
         role: 'user',
         content: [
           ...imageBlocks,
           {
             type: 'text',
-            text: `You are a shipping and logistics expert who analyzes images to identify items and provide accurate size, weight, and handling estimates for carriers.${photoNote}${materialHint}${rescanNote}
+            text: `You are a shipping and logistics expert who analyzes images to identify items and provide accurate size, weight, and handling estimates for carriers.${photoNote}${materialHint}
 
 STEP 1 — Classify the item:${category ? `\nThe user has already told you this is: "${category}" — use this as a strong hint and set itemCategory accordingly.` : `
 - "furniture": household or office items (sofas, dressers, tables, chairs, appliances, etc.)
@@ -124,8 +115,6 @@ STEP 3 — Estimate dimensions and weight:
 - Density references: solid wood ~45, upholstered ~22, particleboard ~35, metal ~90, marble ~160, cast iron ~450 lbs/cu ft
 - Machinery weight references: CAT 305E mini excavator ~11,500 lbs, compact skid steer ~6,000 lbs, full excavator (CAT 320) ~48,000 lbs, large generator ~2,000–10,000 lbs`}
 
-${SIZE_FAMILIES_PHOTO}
-
 STEP 4 — For machinery, recommend the appropriate trailer:
 - "standard": small equipment under 3,000 lbs, fits in a cargo van or pickup
 - "enclosed": sensitive or weather-sensitive equipment needing full protection
@@ -133,9 +122,8 @@ STEP 4 — For machinery, recommend the appropriate trailer:
 - "lowboy": ONLY for full-size heavy equipment that is too tall for a standard flatbed — large excavators (CAT 320 and up, 20+ tons), large cranes, large bulldozers (D6 and up). A mini excavator like a CAT 305E or 308 is a FLATBED, not a lowboy.
 - "RGN": extremely oversized or overweight loads over 48,000 lbs requiring a detachable neck for drive-on loading
 
-Respond with ONLY valid JSON, no markdown, no code fences. The "analysis" field comes FIRST — work through your scale reasoning there BEFORE committing to any numbers:
+Respond with ONLY valid JSON, no markdown, no code fences:
 {
-  "analysis": "2-4 sentences: what the item is, which visual scale references you found (doorway, outlet, known-size objects), and how you derived the dimensions from them. If you matched a standard manufactured size, say which.",
   "itemCategory": "furniture" or "machinery",
   "itemType": "specific name of the item",
   "brand": "manufacturer brand name if identifiable (e.g. 'Caterpillar', 'John Deere', 'Kubota', 'Bobcat') or null",
