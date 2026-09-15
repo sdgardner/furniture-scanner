@@ -1339,7 +1339,7 @@ function ScreenMoveInventory({ go, inventory, setInventory, onPost }) {
         body: JSON.stringify({
           images:[img],
           materials: matLabel ? [matLabel] : [],
-          rescanContext: it ? { itemType: it.itemType, width: it.width, height: it.height, depth: it.depth } : undefined,
+          rescanContext: it ? { itemType: it.itemType } : undefined,
         }),
       })
         .then(r => r.json())

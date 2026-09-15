@@ -29,6 +29,11 @@ Size families:
 BIAS WARNING: visual estimates systematically skew LARGE, especially for items seen at an angle or filling the frame. When your anchors leave you torn between two sizes in a family, pick the SMALLER one. In offices and homes, the compact variant is more common than the showroom variant.
 Use pure visual estimation only for items with no standard size, and apply the same skew-small correction.`;
 
+// Video-frame estimates skew large; deliberately-framed photos don't. Only the
+// walkthrough inventory gets the skew-small correction.
+const SIZE_FAMILIES_PHOTO = SIZE_FAMILIES.split('BIAS WARNING:')[0]
+  + 'Use the size family as a menu to choose from with your scale evidence — never as a reason to override clear visual measurements. Items with no standard size: pure visual estimation.';
+
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.post('/detect', async (req, res) => {
@@ -85,7 +90,7 @@ app.post('/analyze', async (req, res) => {
     : '';
 
   const rescanNote = rescanContext?.itemType
-    ? `\nCONTEXT — this photo is a close-up verification of an item already identified in a room walkthrough as: "${rescanContext.itemType}"${rescanContext.width ? `, previously estimated at about ${rescanContext.width}"W × ${rescanContext.height}"H × ${rescanContext.depth}"D` : ''}. Use this photo to REFINE that estimate. Trust clear visual evidence and scale references in the photo over the prior, but if the photo is a tight close-up with NO scale references visible (no doorway, outlet, floor line, or known-size object), do NOT re-guess from the photo alone — a close-up without anchors carries almost no size information. In that case, keep close to the prior estimate, use the photo mainly to confirm the item's identity, proportions, and material, and pick the best-matching standard size in its family.`
+    ? `\nCONTEXT — the user is RE-scanning an item that a room walkthrough identified as: "${rescanContext.itemType}". They are rescanning because the previous measurement seemed WRONG, so do NOT assume any prior estimate is correct. Measure this item INDEPENDENTLY from this photo: find scale references (doorway, outlet, floor line, known-size objects like paper or cans), derive the dimensions from them, and cross-check against the item's standard size family. If the photo truly has no scale reference, choose the family member that best matches the item's visible proportions.`
     : '';
 
   try {
@@ -119,7 +124,7 @@ STEP 3 — Estimate dimensions and weight:
 - Density references: solid wood ~45, upholstered ~22, particleboard ~35, metal ~90, marble ~160, cast iron ~450 lbs/cu ft
 - Machinery weight references: CAT 305E mini excavator ~11,500 lbs, compact skid steer ~6,000 lbs, full excavator (CAT 320) ~48,000 lbs, large generator ~2,000–10,000 lbs`}
 
-${SIZE_FAMILIES}
+${SIZE_FAMILIES_PHOTO}
 
 STEP 4 — For machinery, recommend the appropriate trailer:
 - "standard": small equipment under 3,000 lbs, fits in a cargo van or pickup
