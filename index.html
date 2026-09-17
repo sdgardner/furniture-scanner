@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
   <title>Item Scanner — uShip</title>
   <link rel="stylesheet" href="project/colors_and_type.css">
   <link rel="stylesheet" href="project/components.css">
@@ -15,6 +15,7 @@
       max-width: 480px; margin: 0 auto; height: 100%;
       position: relative; overflow: hidden;
       display: flex; flex-direction: column; background: var(--gray-50);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
     .screens { flex: 1; position: relative; overflow: hidden; }
     .screen {
@@ -27,8 +28,8 @@
     .screen.active  { transform: translateX(0);    opacity: 1; pointer-events: auto; }
     .screen.behind  { transform: translateX(-20%); opacity: 0; pointer-events: none; }
 
-    .app-bar { height: 56px; flex-shrink: 0; display: flex; align-items: center; padding: 0 16px; gap: 8px; background: var(--blue-600); }
-    .back-bar { height: 48px; flex-shrink: 0; display: flex; align-items: center; padding: 0 8px; gap: 4px; background: var(--gray-0); border-bottom: 1px solid var(--gray-200); }
+    .app-bar { height: calc(56px + env(safe-area-inset-top, 0px)); flex-shrink: 0; display: flex; align-items: center; padding: 0 16px; padding-top: env(safe-area-inset-top, 0px); gap: 8px; background: var(--blue-600); }
+    .back-bar { height: calc(48px + env(safe-area-inset-top, 0px)); flex-shrink: 0; display: flex; align-items: center; padding: 0 8px; padding-top: env(safe-area-inset-top, 0px); gap: 4px; background: var(--gray-0); border-bottom: 1px solid var(--gray-200); }
     .step-bar { flex-shrink: 0; padding: 10px 20px 8px; background: var(--gray-0); border-bottom: 1px solid var(--gray-200); }
 
     /* Camera */
@@ -371,6 +372,7 @@ function StepBar({ current }) {
 
 /* ── SCREEN 0 · HOME ────────────────────────────────────────────────────── */
 function ScreenHome({ go, scans }) {
+  const [arDims, setArDims] = useState(null);
   return (
     <div style={{flex:1,background:'var(--gray-50)',display:'flex',flexDirection:'column'}}>
       <div className="app-bar">
@@ -410,6 +412,22 @@ function ScreenHome({ go, scans }) {
             <LIcon name="video" size={20} />Scan a Whole Move
             <span className="skid-badge skid-badge--green skid-badge--solid skid-badge--sm" style={{position:'absolute',top:-8,right:-4}}>NEW</span>
           </button>
+          {HAS_AR && (
+            <button className="skid-btn skid-btn--tertiary skid-btn--lg" style={{width:'100%',gap:10}} onClick={()=>startARMeasure(setArDims)}>
+              <LIcon name="ruler" size={20} />Quick Measure with AR
+            </button>
+          )}
+          {arDims && (
+            <div style={{background:'var(--green-50)',border:'1px solid var(--green-200)',borderRadius:8,padding:'12px 14px',display:'flex',alignItems:'center',gap:10}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11,fontWeight:700,color:'var(--green-700)',textTransform:'uppercase',letterSpacing:'.4px',marginBottom:2}}>AR Measurement</div>
+                <div style={{fontSize:15,fontWeight:700,color:'var(--gray-800)'}}>
+                  {[['width','W'],['height','H'],['depth','D']].filter(([k])=>arDims[k]).map(([k,l])=>`${l} ${arDims[k]}"`).join('  ×  ') || 'No dimensions captured'}
+                </div>
+              </div>
+              <button className="skid-btn skid-btn--ghost skid-btn--sm" style={{width:32,height:32,padding:0}} onClick={()=>setArDims(null)}><LIcon name="x" size={16} /></button>
+            </div>
+          )}
         </div>
       </div>
       <div style={{padding:'16px 16px 8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
@@ -820,7 +838,7 @@ function ScreenResults({ go, units, showConfidence, result, onUpdate }) {
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',background:'#111'}}>
-      <div style={{height:52,flexShrink:0,background:'rgba(0,0,0,.75)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',padding:'0 8px',gap:8}}>
+      <div style={{height:'calc(52px + env(safe-area-inset-top, 0px))',flexShrink:0,background:'rgba(0,0,0,.75)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',padding:'0 8px',paddingTop:'env(safe-area-inset-top, 0px)',gap:8}}>
         <button className="skid-btn skid-btn--ghost skid-btn--sm" style={{width:36,height:36,padding:0,color:'#fff'}} onClick={()=>go(1)}><IcoBack /></button>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontWeight:700,fontSize:15,color:'#fff',lineHeight:1.2}}>
@@ -940,6 +958,13 @@ function ScreenResults({ go, units, showConfidence, result, onUpdate }) {
           </div>
         )}
 
+        {HAS_AR && (
+          <button className="skid-btn skid-btn--secondary skid-btn--md" style={{width:'100%',gap:8,marginBottom:14}}
+            onClick={()=>startARMeasure(r => onUpdate(applyARDims(result, r)))}>
+            <LIcon name="ruler" size={16} />Measure with AR
+          </button>
+        )}
+
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:6}}>
           {[['Width','width',W],['Height','height',H],['Depth','depth',D]].map(([lbl,field,val])=>(
             <div key={field} className="stat-cell" style={{cursor:'pointer'}}
@@ -958,13 +983,6 @@ function ScreenResults({ go, units, showConfidence, result, onUpdate }) {
           ))}
         </div>
         <p style={{fontSize:11,color:'var(--gray-500)',margin:'0 0 14px'}}>Off? Tap a dimension and enter the real measurement — we'll offer to rescale the rest to match.</p>
-
-        {HAS_AR && (
-          <button className="skid-btn skid-btn--secondary skid-btn--md" style={{width:'100%',gap:8,marginBottom:14}}
-            onClick={()=>startARMeasure(r => onUpdate(applyARDims(result, r)))}>
-            <LIcon name="ruler" size={16} />Measure with AR
-          </button>
-        )}
 
         {scaleAsk && (
           <div style={{background:'var(--blue-50)',border:'1px solid var(--blue-200)',borderRadius:8,padding:'10px 12px',marginBottom:14}}>

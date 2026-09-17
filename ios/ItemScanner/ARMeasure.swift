@@ -23,20 +23,31 @@ struct ARMeasureScreen: UIViewControllerRepresentable {
     func updateUIViewController(_ vc: ARMeasureViewController, context: Context) {}
 }
 
-/// Measure-app-style flow: aim the center reticle at a point on the item,
-/// tap "+" to drop the first point, aim at the second point, tap "+" again.
-/// The distance shows live; assign it to W, H, or D, then measure the next
-/// edge. Done returns whatever was captured (even one dimension helps —
-/// the web app rescales proportionally).
+/// Measure-app-style flow with stability fixes:
+/// - points are ARAnchors, so ARKit keeps them glued to the real surface as
+///   its world map refines (this is what stops the drift)
+/// - a live preview dot shows exactly where the point will land before you tap
+/// - Apple's coaching overlay guides the initial room scan
+/// - raycasts prefer detected plane geometry over rough estimates
 final class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
     var completion: ((ARMeasureResult?) -> Void)?
 
     private let sceneView = ARSCNView()
-    private var pointA: SCNVector3?
-    private var pointB: SCNVector3?
-    private var markerNodes: [SCNNode] = []
+    private var pointAnchors: [ARAnchor] = []
+    private var anchorRoles: [UUID: Int] = [:]        // anchor id → 0 (first point) | 1 (second)
+    private var anchorPositions: [Int: SCNVector3] = [:]
+    private var lineNode: SCNNode?
     private var currentInches: Double?
     private var result = ARMeasureResult()
+
+    private let previewDot: SCNNode = {
+        let s = SCNSphere(radius: 0.005)
+        s.firstMaterial?.diffuse.contents = UIColor(red: 0.35, green: 0.75, blue: 0.88, alpha: 0.9)
+        s.firstMaterial?.lightingModel = .constant
+        let n = SCNNode(geometry: s)
+        n.isHidden = true
+        return n
+    }()
 
     private let reticle = UIView()
     private let distanceLabel = UILabel()
@@ -55,6 +66,17 @@ final class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
         sceneView.autoenablesDefaultLighting = true
         view.addSubview(sceneView)
 
+        sceneView.scene.rootNode.addChildNode(previewDot)
+
+        // Apple's built-in "move your phone around" guidance
+        let coaching = ARCoachingOverlayView()
+        coaching.session = sceneView.session
+        coaching.goal = .anyPlane
+        coaching.activatesAutomatically = true
+        coaching.frame = view.bounds
+        coaching.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(coaching)
+
         buildUI()
     }
 
@@ -63,7 +85,7 @@ final class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
         let config = ARWorldTrackingConfiguration()
         config.planeDetection = [.horizontal, .vertical]
         if ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) {
-            config.sceneReconstruction = .mesh   // LiDAR phones get better hits
+            config.sceneReconstruction = .mesh   // LiDAR phones get precise surface hits
         }
         sceneView.session.run(config)
     }
@@ -76,7 +98,6 @@ final class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
     // MARK: - UI
 
     private func buildUI() {
-        // Center reticle
         reticle.frame = CGRect(x: 0, y: 0, width: 26, height: 26)
         reticle.center = view.center
         reticle.layer.cornerRadius = 13
@@ -88,8 +109,7 @@ final class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
         reticle.isUserInteractionEnabled = false
         view.addSubview(reticle)
 
-        // Status / instructions
-        statusLabel.text = "Aim the circle at one edge of the item, then tap +"
+        statusLabel.text = "Slowly sweep your phone across the item first, then aim at one edge and tap +"
         statusLabel.textColor = .white
         statusLabel.font = .systemFont(ofSize: 14, weight: .semibold)
         statusLabel.textAlignment = .center
@@ -99,14 +119,12 @@ final class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
         statusLabel.clipsToBounds = true
         view.addSubview(statusLabel)
 
-        // Live distance
         distanceLabel.text = ""
         distanceLabel.textColor = UIColor(red: 0.35, green: 0.75, blue: 0.88, alpha: 1)
         distanceLabel.font = .monospacedDigitSystemFont(ofSize: 30, weight: .bold)
         distanceLabel.textAlignment = .center
         view.addSubview(distanceLabel)
 
-        // Add-point button
         addButton.setTitle("+", for: .normal)
         addButton.titleLabel?.font = .systemFont(ofSize: 34, weight: .bold)
         addButton.tintColor = .black
@@ -115,7 +133,6 @@ final class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
         addButton.addTarget(self, action: #selector(addPoint), for: .touchUpInside)
         view.addSubview(addButton)
 
-        // Assign buttons
         for key in ["W", "H", "D"] {
             let b = UIButton(type: .system)
             b.setTitle("\(key): —", for: .normal)
@@ -131,7 +148,6 @@ final class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
             assignButtons[key] = b
         }
 
-        // Cancel / Reset / Done
         let cancel = UIButton(type: .system)
         cancel.setTitle("Cancel", for: .normal)
         cancel.setTitleColor(.white, for: .normal)
@@ -171,38 +187,93 @@ final class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
         }
     }
 
-    // MARK: - Measuring
+    // MARK: - Raycasting
 
-    private func raycastCenter() -> SCNVector3? {
-        guard let query = sceneView.raycastQuery(from: view.center,
-                                                 allowing: .estimatedPlane,
-                                                 alignment: .any),
-              let hit = sceneView.session.raycast(query).first else { return nil }
-        let t = hit.worldTransform.columns.3
-        return SCNVector3(t.x, t.y, t.z)
+    /// Prefer real detected plane geometry (stable) over rough estimates.
+    private func raycastCenterHit() -> ARRaycastResult? {
+        if let q = sceneView.raycastQuery(from: view.center, allowing: .existingPlaneGeometry, alignment: .any),
+           let r = sceneView.session.raycast(q).first { return r }
+        if let q = sceneView.raycastQuery(from: view.center, allowing: .estimatedPlane, alignment: .any),
+           let r = sceneView.session.raycast(q).first { return r }
+        return nil
     }
 
+    // Live preview: show where the point would land, every frame.
+    func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
+        DispatchQueue.main.async {
+            if let hit = self.raycastCenterHit() {
+                let t = hit.worldTransform.columns.3
+                self.previewDot.position = SCNVector3(t.x, t.y, t.z)
+                self.previewDot.isHidden = false
+                self.addButton.isEnabled = true
+                self.addButton.alpha = 1
+                self.reticle.layer.borderColor = UIColor(red: 0.35, green: 0.85, blue: 0.55, alpha: 1).cgColor
+            } else {
+                self.previewDot.isHidden = true
+                self.addButton.isEnabled = false
+                self.addButton.alpha = 0.4
+                self.reticle.layer.borderColor = UIColor.white.cgColor
+            }
+        }
+    }
+
+    // MARK: - Measuring
+
     @objc private func addPoint() {
-        guard let pos = raycastCenter() else {
-            statusLabel.text = "No surface found — move closer or add more light"
+        guard let hit = raycastCenterHit() else {
+            statusLabel.text = "No surface found — sweep your phone across the item slowly"
             return
         }
-        if pointA == nil {
-            pointA = pos
-            addMarker(at: pos)
-            statusLabel.text = "Now aim at the other edge and tap + again"
-        } else if pointB == nil {
-            pointB = pos
-            addMarker(at: pos)
-            drawLine(from: pointA!, to: pos)
-            let meters = distance(pointA!, pos)
-            currentInches = Double(meters) * 39.3701
-            distanceLabel.text = String(format: "%.1f\"", currentInches!)
-            statusLabel.text = "Tap W, H, or D below to save this measurement"
-        } else {
-            resetPoints()
-            addPoint()
+        let role: Int
+        if anchorPositions[0] == nil { role = 0 }
+        else if anchorPositions[1] == nil { role = 1 }
+        else { resetPoints(); addPoint(); return }
+
+        let anchor = ARAnchor(name: "measure-point", transform: hit.worldTransform)
+        anchorRoles[anchor.identifier] = role
+        pointAnchors.append(anchor)
+        sceneView.session.add(anchor: anchor)
+
+        statusLabel.text = role == 0
+            ? "Now aim at the other edge and tap + again"
+            : "Tap W, H, or D below to save this measurement"
+    }
+
+    // ARKit gives every anchor a node — put the marker there so it stays
+    // pinned to the surface even as tracking refines.
+    func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
+        guard let role = anchorRoles[anchor.identifier] else { return }
+        let sphere = SCNSphere(radius: 0.006)
+        sphere.firstMaterial?.diffuse.contents = UIColor.white
+        sphere.firstMaterial?.lightingModel = .constant
+        node.addChildNode(SCNNode(geometry: sphere))
+        let t = anchor.transform.columns.3
+        DispatchQueue.main.async {
+            self.anchorPositions[role] = SCNVector3(t.x, t.y, t.z)
+            self.refreshMeasurement()
         }
+    }
+
+    // Tracking refinements move the anchors — keep the line and distance live.
+    func renderer(_ renderer: SCNSceneRenderer, didUpdate node: SCNNode, for anchor: ARAnchor) {
+        guard let role = anchorRoles[anchor.identifier] else { return }
+        let t = anchor.transform.columns.3
+        DispatchQueue.main.async {
+            self.anchorPositions[role] = SCNVector3(t.x, t.y, t.z)
+            self.refreshMeasurement()
+        }
+    }
+
+    private func refreshMeasurement() {
+        lineNode?.removeFromParentNode()
+        lineNode = nil
+        guard let a = anchorPositions[0], let b = anchorPositions[1] else { return }
+        let node = makeLine(from: a, to: b)
+        sceneView.scene.rootNode.addChildNode(node)
+        lineNode = node
+        let inches = Double(distance(a, b)) * 39.3701
+        currentInches = inches
+        distanceLabel.text = String(format: "%.1f\"", inches)
     }
 
     @objc private func assignDimension(_ sender: UIButton) {
@@ -216,15 +287,21 @@ final class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
         sender.setTitle("\(key): \(String(format: "%.1f", rounded))\"", for: .normal)
         sender.layer.borderColor = UIColor(red: 0.35, green: 0.85, blue: 0.55, alpha: 1).cgColor
         resetPoints()
-        statusLabel.text = result.isEmpty ? "" : "Measure the next edge, or tap Done"
+        statusLabel.text = "Saved. Measure the next edge, or tap Done"
     }
 
     @objc private func resetPoints() {
-        pointA = nil; pointB = nil; currentInches = nil
+        pointAnchors.forEach { sceneView.session.remove(anchor: $0) }
+        pointAnchors.removeAll()
+        anchorRoles.removeAll()
+        anchorPositions.removeAll()
+        lineNode?.removeFromParentNode()
+        lineNode = nil
+        currentInches = nil
         distanceLabel.text = ""
-        markerNodes.forEach { $0.removeFromParentNode() }
-        markerNodes.removeAll()
-        if result.isEmpty { statusLabel.text = "Aim the circle at one edge of the item, then tap +" }
+        if result.isEmpty {
+            statusLabel.text = "Aim the circle at one edge of the item, then tap +"
+        }
     }
 
     @objc private func doneTapped() {
@@ -237,25 +314,19 @@ final class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
 
     // MARK: - Scene helpers
 
-    private func addMarker(at pos: SCNVector3) {
-        let sphere = SCNSphere(radius: 0.006)
-        sphere.firstMaterial?.diffuse.contents = UIColor.white
-        let node = SCNNode(geometry: sphere)
-        node.position = pos
-        sceneView.scene.rootNode.addChildNode(node)
-        markerNodes.append(node)
-    }
-
-    private func drawLine(from a: SCNVector3, to b: SCNVector3) {
-        let vertices = [a, b]
-        let source = SCNGeometrySource(vertices: vertices)
-        let indices: [Int32] = [0, 1]
-        let element = SCNGeometryElement(indices: indices, primitiveType: .line)
-        let geometry = SCNGeometry(sources: [source], elements: [element])
-        geometry.firstMaterial?.diffuse.contents = UIColor(red: 0.35, green: 0.75, blue: 0.88, alpha: 1)
-        let node = SCNNode(geometry: geometry)
-        sceneView.scene.rootNode.addChildNode(node)
-        markerNodes.append(node)
+    private func makeLine(from a: SCNVector3, to b: SCNVector3) -> SCNNode {
+        let dist = distance(a, b)
+        let parent = SCNNode()
+        parent.position = a
+        parent.look(at: b)   // -Z now points at b
+        let cyl = SCNCylinder(radius: 0.0018, height: CGFloat(dist))
+        cyl.firstMaterial?.diffuse.contents = UIColor(red: 0.35, green: 0.75, blue: 0.88, alpha: 1)
+        cyl.firstMaterial?.lightingModel = .constant
+        let cylNode = SCNNode(geometry: cyl)
+        cylNode.eulerAngles.x = -.pi / 2                 // align cylinder's long axis with -Z
+        cylNode.position = SCNVector3(0, 0, -dist / 2)
+        parent.addChildNode(cylNode)
+        return parent
     }
 
     private func distance(_ a: SCNVector3, _ b: SCNVector3) -> Float {
